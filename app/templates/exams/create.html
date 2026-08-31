@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Exam - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <h1>Log New Exam</h1>
+    <p class="subtitle">Enter exam details. You will immediately enter the Exam Workspace to log individual questions.</p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('exams.create_exam') }}">
+      <div class="form-group">
+        <label class="form-label" for="name">Exam Name *</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="e.g. JEE Full Test #4, Midterm Physics 2026" required>
+      </div>
+
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="date">Exam Date</label>
+          <input type="date" id="date" name="date" class="form-control" value="{{ now }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="total_marks">Maximum Marks</label>
+          <input type="number" step="0.5" id="total_marks" name="total_marks" class="form-control" placeholder="e.g. 120" value="120">
+        </div>
+      </div>
+
+      <div class="grid-cols-3">
+        <div class="form-group">
+          <label class="form-label" for="score">Obtained Score</label>
+          <input type="number" step="0.5" id="score" name="score" class="form-control" placeholder="e.g. 71" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="center_rank">Center Rank</label>
+          <input type="number" id="center_rank" name="center_rank" class="form-control" placeholder="e.g. 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="institution_rank">Institution Rank</label>
+          <input type="number" id="institution_rank" name="institution_rank" class="form-control" placeholder="e.g. 5">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="notes">Exam Notes / Takeaways</label>
+        <textarea id="notes" name="notes" class="form-control" placeholder="e.g. Felt rushed in Organic Chem section, high speed errors in Maths calculation."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+        <a href="{{ url_for('exams.list_exams') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Create Exam & Open Workspace &rarr;</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

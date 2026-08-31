@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Active Recall Review - Question #{{ question.id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+          {{ question.chapter.subject.name if question.chapter and question.chapter.subject else '' }} &rarr; {{ question.chapter.name if question.chapter else '' }}
+        </span>
+        <span class="badge badge-state-{{ question.review_state|lower }}">Current State: {{ question.review_state }}</span>
+      </div>
+      <h1>Active Recall Practice</h1>
+    </div>
+    <a href="{{ url_for('review.queue') }}" class="btn btn-secondary btn-sm">&larr; Exit Queue</a>
+  </div>
+
+  <!-- Focused Review Card -->
+  <div class="review-card">
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+      Question Statement
+    </div>
+
+    <div class="render-math" style="font-size: 1.15rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 20px;">
+      {{ question.question_text if question.question_text else 'Inspect image below:' }}
+    </div>
+
+    {% if question.image_path %}
+      <div style="margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename=question.image_path) }}" alt="Question image" style="max-width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+      </div>
+    {% endif %}
+
+    {% if question.options %}
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Options:</h3>
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px;">
+          {% for opt in question.options %}
+            <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+              <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
+              <span class="render-math">{{ opt.text }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Reveal Toggle Action -->
+    <div style="text-align: center; margin: 28px 0;" id="revealActionContainer">
+      <button type="button" id="revealAnswerBtn" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">
+        👁️ Reveal Answer, Solution & Past Mistake
+      </button>
+    </div>
+
+    <!-- Hidden Answer & Solution Box until Clicked -->
+    <div id="solutionRevealBox" class="reveal-box" style="display: none;">
+      <h3 style="color: var(--success); margin-bottom: 8px;">Correct Answer: {{ question.correct_answer if question.correct_answer else 'See solution' }}</h3>
+
+      {% if question.solution %}
+        <div style="margin-bottom: 16px;" class="render-math">
+          <strong>Solution & Explanation:</strong>
+          <div style="margin-top: 6px; font-size: 0.95rem; line-height: 1.6;">{{ question.solution }}</div>
+        </div>
+      {% endif %}
+
+      {% if latest_att and latest_att.mistake_reason %}
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px 16px; border-radius: var(--border-radius-sm); margin-bottom: 20px;">
+          <div style="font-weight: 700; color: #991b1b; font-size: 0.875rem;">Your Previous Mistake ({{ latest_att.mistake_type }}):</div>
+          <div style="color: #b91c1c; font-size: 0.875rem; margin-top: 2px;">{{ latest_att.mistake_reason }}</div>
+        </div>
+      {% endif %}
+
+      <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 20px 0;">
+
+      <!-- Submission Form for Review Attempt -->
+      <form method="POST" action="{{ url_for('review.session', question_id=question.id) }}">
+        <h3 style="margin-bottom: 12px;">Did you get it right this time?</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="user_answer">Your Answer in Practice</label>
+          <input type="text" id="user_answer" name="user_answer" class="form-control" placeholder="e.g. D or 12.5">
+        </div>
+
+        <div class="form-group" style="background: #ffffff; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          <div style="display: flex; gap: 24px; font-weight: 600;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--success);">
+              <input type="radio" name="is_correct" value="true" required>
+              ● Correct (Progress to next review state)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--danger);">
+              <input type="radio" name="is_correct" value="false">
+              ✖ Wrong (Stay in Review Queue)
+            </label>
+          </div>
+        </div>
+
+        <div class="grid-cols-2">
+          <div class="form-group">
+            <label class="form-label" for="mistake_type">Mistake Category (if wrong)</label>
+            <select name="mistake_type" id="mistake_type" class="form-select">
+              <option value="">-- Choose Category --</option>
+              {% for m in mistake_types %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confidence">Confidence</label>
+            <select name="confidence" id="confidence" class="form-select">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="mistake_reason">Mistake Notes (if wrong)</label>
+          <textarea id="mistake_reason" name="mistake_reason" class="form-control" placeholder="Why were you still confused?"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <a href="{{ url_for('review.queue') }}" class="btn btn-secondary">Skip / Back to Queue</a>
+          <button type="submit" class="btn btn-primary">Save Attempt & Continue &rarr;</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Standalone Question - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <h1>Add Standalone Question</h1>
+    <p class="subtitle">Add a practice question or problem directly into your Question Library.</p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('questions.create_question') }}" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label" for="chapter_id">Chapter *</label>
+        <select name="chapter_id" id="chapter_id" class="form-select" required>
+          <option value="">-- Choose Chapter --</option>
+          {% for ch in chapters %}
+            <option value="{{ ch.id }}">{{ ch.subject.name }} &rarr; {{ ch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="question_type">Question Type</label>
+          <select name="question_type" id="question_type" class="form-select">
+            <option value="MCQ">MCQ</option>
+            <option value="Multiple Select">Multiple Select</option>
+            <option value="Numerical">Numerical</option>
+            <option value="Subjective">Subjective</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="difficulty">Difficulty</label>
+          <select name="difficulty" id="difficulty" class="form-select">
+            <option value="Easy">Easy</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="question_text">Question Content (Markdown / LaTeX supported)</label>
+        <textarea id="question_text" name="question_text" class="form-control" placeholder="Type statement or math formulas..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="question_image">Upload Question Image (Optional)</label>
+        <input type="file" id="question_image" name="question_image" class="form-control" accept="image/*">
+      </div>
+
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="correct_answer">Correct Answer</label>
+          <input type="text" id="correct_answer" name="correct_answer" class="form-control" placeholder="e.g. C or 15.4">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tags">Tags (comma separated)</label>
+          <input type="text" id="tags" name="tags" class="form-control" placeholder="e.g. roots, quadratic, vectors">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="solution">Solution / Explanation</label>
+        <textarea id="solution" name="solution" class="form-control" placeholder="Step by step solution..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+        <a href="{{ url_for('questions.bank') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save to Question Library</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

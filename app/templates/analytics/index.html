@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Performance Analytics - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h1>Performance Analytics</h1>
+  <p class="subtitle">In-depth statistical insights into accuracy trends, subject mastery, mistake categories, and confidence misconceptions.</p>
+</div>
+
+<!-- Score Trend Chart Card -->
+<div class="card" style="margin-bottom: 28px;">
+  <div class="card-header">
+    <h2>Exam Score & Percentage Trend Over Time</h2>
+  </div>
+  {% if exam_dates %}
+    <div style="height: 280px; position: relative;">
+      <canvas id="scoreTrendChart"></canvas>
+    </div>
+  {% else %}
+    <div class="empty-state" style="padding: 20px;">
+      <p>Log exams to see performance trend graphs.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- High Confidence Misconceptions Section -->
+<div class="card" style="margin-bottom: 28px; border-left: 6px solid var(--danger);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+    <div>
+      <h2 style="color: #991b1b; margin-bottom: 4px;">⚠️ High Confidence Misconceptions ({{ high_conf_wrong|length }} questions)</h2>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">
+        These are questions where you felt <strong>High Confidence</strong> but answered <strong>Wrong</strong>. These indicate fundamental conceptual blindspots rather than hesitation.
+      </p>
+    </div>
+  </div>
+
+  {% if high_conf_wrong %}
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+      {% for att in high_conf_wrong %}
+        {% set q = att.question %}
+        <div class="misconception-card" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: #991b1b; margin-bottom: 4px;">
+              {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else '' }}
+              {% if att.mistake_type %}<span class="badge badge-mistake" style="margin-left: 8px;">{{ att.mistake_type }}</span>{% endif %}
+            </div>
+            <div class="render-math" style="font-size: 0.925rem; color: var(--text-primary);">
+              {{ q.question_text if q.question_text else '[Image Based Question]' }}
+            </div>
+            {% if att.mistake_reason %}
+              <div style="font-size: 0.825rem; color: #b91c1c; margin-top: 4px;">
+                <strong>Reason:</strong> {{ att.mistake_reason }}
+              </div>
+            {% endif %}
+          </div>
+
+          <a href="{{ url_for('questions.detail', question_id=q.id) }}" class="btn btn-secondary btn-sm" style="white-space: nowrap;">Inspect & Fix &rarr;</a>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="background: var(--success-light); color: #047857; padding: 16px; border-radius: var(--border-radius-sm); font-weight: 500;">
+      ✓ No high-confidence misconceptions detected! Your confidence is well-calibrated with accuracy.
+    </div>
+  {% endif %}
+</div>
+
+<!-- Grid: Subject Comparison & Mistake Category Impact -->
+<div class="grid-cols-2" style="margin-bottom: 28px;">
+  <!-- Subject Breakdown -->
+  <div class="card">
+    <h2>Subject Mastery Comparison</h2>
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+      {% for s in subject_stats %}
+        <div style="padding: 14px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-weight: 700; color: var(--primary);">{{ s.name }}</span>
+            <span style="font-weight: 700; font-size: 1.1rem; color: {% if s.accuracy >= 75 %}var(--success){% elif s.accuracy >= 50 %}var(--warning){% else %}var(--danger){% endif %};">
+              {{ s.accuracy }}% Accuracy
+            </span>
+          </div>
+          <div style="font-size: 0.825rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+            <span>Attempts: {{ s.total }} ({{ s.correct }} ✓ / {{ s.wrong }} ✖)</span>
+            <span style="color: var(--danger);">Marks Lost: -{{ s.marks_lost }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Mistake Categories Breakdown -->
+  <div class="card">
+    <h2>Marks Lost by Mistake Category</h2>
+    {% if mistake_stats %}
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+        {% for m in mistake_stats %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+            <div>
+              <span class="badge badge-mistake">{{ m.mistake_type }}</span>
+              <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 8px;">{{ m.count }} occurrence(s)</span>
+            </div>
+            <div style="font-weight: 700; color: var(--danger);">
+              -{{ m.marks_lost }} marks
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 20px;">
+        <p>No mistake categories logged yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Difficulty Level Breakdown -->
+<div class="card">
+  <h2>Performance by Difficulty Level</h2>
+  <div class="grid-cols-3" style="margin-top: 16px;">
+    {% for d in difficulty_stats %}
+      <div style="padding: 16px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); text-align: center;">
+        <span class="badge badge-{{ d.difficulty|lower }}" style="font-size: 0.9rem; margin-bottom: 8px;">{{ d.difficulty }}</span>
+        <div style="font-size: 1.6rem; font-weight: 700; margin: 4px 0;">{{ d.accuracy }}%</div>
+        <div style="font-size: 0.825rem; color: var(--text-secondary);">
+          {{ d.wrong }} wrong out of {{ d.total }} total attempts
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const ctx = document.getElementById('scoreTrendChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ exam_dates|tojson }},
+        datasets: [{
+          label: 'Exam Percentage (%)',
+          data: {{ exam_percentages|tojson }},
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 3,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function(value) { return value + '%'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

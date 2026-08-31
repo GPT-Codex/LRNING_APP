@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Queue - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>Active Recall Review Queue</h1>
+    <p class="subtitle">Systematic spaced review queue. Convert mistakes into mastered knowledge through active re-testing.</p>
+  </div>
+  {% if due_questions %}
+    <a href="{{ url_for('review.session', question_id=due_questions[0].id) }}" class="btn btn-success">▶ Start Review Session</a>
+  {% endif %}
+</div>
+
+<!-- Queue Progression Summary Cards -->
+<div class="grid-cols-4" style="margin-bottom: 28px;">
+  <a href="{{ url_for('review.queue', state='Wrong') }}" style="text-decoration: none;">
+    <div class="card stat-card" style="border-top: 4px solid var(--danger); {% if current_filter == 'Wrong' %}background: #fef2f2;{% endif %}">
+      <span class="stat-label">Wrong (Needs Work)</span>
+      <span class="stat-value" style="color: var(--danger);">{{ wrong_count }}</span>
+    </div>
+  </a>
+
+  <a href="{{ url_for('review.queue', state='Learning') }}" style="text-decoration: none;">
+    <div class="card stat-card" style="border-top: 4px solid var(--warning); {% if current_filter == 'Learning' %}background: #fffbe2;{% endif %}">
+      <span class="stat-label">Learning (1 Correct)</span>
+      <span class="stat-value" style="color: var(--warning);">{{ learning_count }}</span>
+    </div>
+  </a>
+
+  <a href="{{ url_for('review.queue', state='Reviewing') }}" style="text-decoration: none;">
+    <div class="card stat-card" style="border-top: 4px solid var(--info); {% if current_filter == 'Reviewing' %}background: #ecfeff;{% endif %}">
+      <span class="stat-label">Reviewing (2 Correct)</span>
+      <span class="stat-value" style="color: var(--info);">{{ reviewing_count }}</span>
+    </div>
+  </a>
+
+  <a href="{{ url_for('review.queue', state='Mastered') }}" style="text-decoration: none;">
+    <div class="card stat-card" style="border-top: 4px solid var(--success); {% if current_filter == 'Mastered' %}background: #ecfdf5;{% endif %}">
+      <span class="stat-label">Mastered</span>
+      <span class="stat-value" style="color: var(--success);">{{ mastered_count }}</span>
+    </div>
+  </a>
+</div>
+
+<!-- List of Queue Questions -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h2>Questions Due for Review {% if current_filter %}(Filter: {{ current_filter }}){% endif %}</h2>
+    {% if current_filter %}
+      <a href="{{ url_for('review.queue') }}" class="btn btn-secondary btn-sm">Show All Queue Items</a>
+    {% endif %}
+  </div>
+
+  {% if due_questions %}
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      {% for q in due_questions %}
+        {% set last_att = q.latest_attempt %}
+        <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 18px; background: #ffffff; display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+                {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else '' }}
+              </span>
+              <span class="badge badge-state-{{ q.review_state|lower }}">{{ q.review_state }}</span>
+              {% if last_att and last_att.mistake_type %}
+                <span class="badge badge-mistake">{{ last_att.mistake_type }}</span>
+              {% endif %}
+            </div>
+
+            <div class="render-math" style="font-size: 0.95rem; font-weight: 500; color: var(--text-primary); line-height: 1.4; max-height: 60px; overflow: hidden;">
+              {{ q.question_text if q.question_text else '[Image Based Question]' }}
+            </div>
+
+            {% if last_att and last_att.mistake_reason %}
+              <div style="font-size: 0.8rem; color: #991b1b; margin-top: 6px;">
+                <strong>Previous Error Note:</strong> {{ last_att.mistake_reason }}
+              </div>
+            {% endif %}
+          </div>
+
+          <div>
+            <a href="{{ url_for('review.session', question_id=q.id) }}" class="btn btn-primary btn-sm">Practice Active Recall &rarr;</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🎉</div>
+      <h3>No questions due in this review queue!</h3>
+      <p>All flagged questions have been mastered or no wrong attempts match this filter.</p>
+      <a href="{{ url_for('questions.bank') }}" class="btn btn-secondary">Browse Question Bank</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

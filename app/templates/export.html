@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Backup & Export - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h1>Backup & Data Export</h1>
+  <p class="subtitle">Export your complete performance history, questions, and attempt data anytime.</p>
+</div>
+
+<div class="grid-cols-2">
+  <!-- JSON Full Dump -->
+  <div class="card">
+    <div style="font-size: 2rem; margin-bottom: 12px;">📦</div>
+    <h2>Full JSON Backup</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+      Download your complete database schema including all Subjects, Chapters, Exams, Questions, Options, and Attempt histories in a single structured JSON file.
+    </p>
+    <a href="{{ url_for('main.export_json') }}" class="btn btn-primary">Download Complete Backup (.json)</a>
+  </div>
+
+  <!-- CSV Exports -->
+  <div class="card">
+    <div style="font-size: 2rem; margin-bottom: 12px;">📊</div>
+    <h2>CSV Data Exports</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+      Download individual tables as CSV files for analysis in external spreadsheet software or tools.
+    </p>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <a href="{{ url_for('main.export_attempts') }}" class="btn btn-secondary" style="justify-content: flex-start;">📄 Export Attempt History (.csv)</a>
+      <a href="{{ url_for('main.export_exams') }}" class="btn btn-secondary" style="justify-content: flex-start;">📄 Export Exams (.csv)</a>
+      <a href="{{ url_for('main.export_questions') }}" class="btn btn-secondary" style="justify-content: flex-start;">📄 Export Question Library (.csv)</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

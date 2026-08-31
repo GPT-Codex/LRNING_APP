@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Workspace - {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div>
+    <h1>Exam Workspace: <span style="color: var(--primary);">{{ exam.name }}</span></h1>
+    <p class="subtitle" style="margin-bottom: 0;">Logging question {{ q_index }} of {{ attempts|length if attempts else 1 }}</p>
+  </div>
+  <a href="{{ url_for('exams.exam_result', exam_id=exam.id) }}" class="btn btn-secondary btn-sm">Finish & View Results &rarr;</a>
+</div>
+
+<div class="workspace-container">
+  <!-- Left Side: Question Navigation Panel -->
+  <div class="question-nav-panel">
+    <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+      <span>Questions Logged</span>
+      <span class="badge" style="background: #f1f5f9; color: var(--text-secondary);">{{ attempts|length }}</span>
+    </div>
+
+    <div class="question-grid">
+      {% for att in attempts %}
+        <a href="{{ url_for('exams.workspace', exam_id=exam.id, q_index=loop.index) }}"
+           class="q-nav-btn {% if loop.index == q_index %}active{% endif %} {% if att.is_correct == True %}completed{% elif att.is_correct == False %}wrong{% endif %}">
+          {{ loop.index }}
+        </a>
+      {% endfor %}
+      <a href="{{ url_for('exams.workspace', exam_id=exam.id, q_index=(attempts|length + 1)) }}"
+         class="q-nav-btn {% if q_index > attempts|length %}active{% endif %}"
+         style="border-style: dashed; color: var(--primary);" title="Add New Question">
+        +
+      </a>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+    <div style="font-size: 0.8rem; color: var(--text-secondary);">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <span style="width: 12px; height: 12px; background: var(--success-light); border: 1px solid var(--success); border-radius: 3px;"></span> Correct
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <span style="width: 12px; height: 12px; background: var(--danger-light); border: 1px solid var(--danger); border-radius: 3px;"></span> Wrong / Mistake
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 12px; height: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 3px;"></span> Unattempted
+      </div>
+    </div>
+    <div style="margin-top: 16px; font-size: 0.75rem; color: var(--text-muted);">
+      💡 Shortcut: Press <strong>Ctrl + Enter</strong> to Save & Next.
+    </div>
+  </div>
+
+  <!-- Right Side: Focused Question Card Form -->
+  <div class="card" style="box-shadow: var(--shadow);">
+    <form id="workspaceQuestionForm" method="POST" action="{{ url_for('exams.workspace_save', exam_id=exam.id) }}" enctype="multipart/form-data">
+      <input type="hidden" name="q_index" value="{{ q_index }}">
+      {% if current_attempt %}
+        <input type="hidden" name="attempt_id" value="{{ current_attempt.id }}">
+      {% endif %}
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">
+          Question #{{ q_index }}
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label class="form-label" style="margin: 0; font-size: 0.825rem;">Type:</label>
+            <select name="question_type" class="form-select" style="padding: 4px 8px; font-size: 0.85rem; width: auto;">
+              <option value="MCQ" {% if current_question and current_question.question_type == 'MCQ' %}selected{% endif %}>MCQ</option>
+              <option value="Multiple Select" {% if current_question and current_question.question_type == 'Multiple Select' %}selected{% endif %}>Multiple Select</option>
+              <option value="Numerical" {% if current_question and current_question.question_type == 'Numerical' %}selected{% endif %}>Numerical</option>
+              <option value="Subjective" {% if current_question and current_question.question_type == 'Subjective' %}selected{% endif %}>Subjective</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label class="form-label" style="margin: 0; font-size: 0.825rem;">Difficulty:</label>
+            <select name="difficulty" class="form-select" style="padding: 4px 8px; font-size: 0.85rem; width: auto;">
+              <option value="Easy" {% if current_question and current_question.difficulty == 'Easy' %}selected{% endif %}>Easy</option>
+              <option value="Medium" {% if not current_question or current_question.difficulty == 'Medium' %}selected{% endif %}>Medium</option>
+              <option value="Hard" {% if current_question and current_question.difficulty == 'Hard' %}selected{% endif %}>Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject / Chapter Selection -->
+      <div class="form-group">
+        <label class="form-label" for="chapter_id">Chapter & Subject *</label>
+        <select name="chapter_id" id="chapter_id" class="form-select" required>
+          <option value="">-- Choose Chapter --</option>
+          {% for ch in chapters %}
+            <option value="{{ ch.id }}" {% if current_question and current_question.chapter_id == ch.id %}selected{% endif %}>
+              {{ ch.subject.name }} &rarr; {{ ch.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Question Text & LaTeX -->
+      <div class="form-group">
+        <label class="form-label" for="question_text">Question Content (Markdown & LaTeX supported, e.g. $D = b^2 - 4ac$)</label>
+        <textarea id="question_text" name="question_text" class="form-control" placeholder="Type question statement or LaTeX math formula...">{{ current_question.question_text if current_question else '' }}</textarea>
+      </div>
+
+      <!-- Optional Image Upload -->
+      <div class="form-group">
+        <label class="form-label">Question Image (Optional screenshot or photograph)</label>
+        {% if current_question and current_question.image_path %}
+          <div style="margin-bottom: 8px;">
+            <img src="{{ url_for('static', filename=current_question.image_path) }}" alt="Question Image" style="max-height: 180px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          </div>
+        {% endif %}
+        <input type="file" name="question_image" class="form-control" accept="image/*">
+      </div>
+
+      <!-- Option Fields for MCQ / Multiple Select -->
+      <div class="form-group" id="mcqOptionsSection">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label class="form-label" style="margin: 0;">Structured Options (for MCQ / Multiple Select)</label>
+          <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">+ Add Option</button>
+        </div>
+        <div id="optionsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+          {% if current_question and current_question.options %}
+            {% for opt in current_question.options %}
+              <div style="display: flex; align-items: center; gap: 8px;" class="option-row">
+                <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" {% if opt.is_correct %}checked{% endif %} title="Mark as correct">
+                <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
+                <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" value="{{ opt.text }}" placeholder="Option content...">
+              </div>
+            {% endfor %}
+          {% else %}
+            <!-- Default 4 Options A, B, C, D -->
+            {% for label in ['A', 'B', 'C', 'D'] %}
+              <div style="display: flex; align-items: center; gap: 8px;" class="option-row">
+                <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" title="Mark as correct">
+                <span style="font-weight: 700; min-width: 24px;">{{ label }}.</span>
+                <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" placeholder="Option {{ label }} content...">
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+      <!-- Answers & Attempt Result -->
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="user_answer">Your Answer in Exam</label>
+          <input type="text" id="user_answer" name="user_answer" class="form-control" placeholder="e.g. B or 42.5" value="{{ current_attempt.user_answer if current_attempt else '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="correct_answer">Correct Answer</label>
+          <input type="text" id="correct_answer" name="correct_answer" class="form-control" placeholder="e.g. D or 40.0" value="{{ current_question.correct_answer if current_question else '' }}">
+        </div>
+      </div>
+
+      <div class="form-group" style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+        <label class="form-label" style="margin-bottom: 10px;">Attempt Outcome *</label>
+        <div style="display: flex; gap: 24px; font-weight: 600;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--success);">
+            <input type="radio" name="is_correct" value="true" {% if current_attempt and current_attempt.is_correct == True %}checked{% endif %} required>
+            ● Correct
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--danger);">
+            <input type="radio" name="is_correct" value="false" {% if current_attempt and current_attempt.is_correct == False %}checked{% endif %}>
+            ✖ Wrong / Mistake
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-secondary);">
+            <input type="radio" name="is_correct" value="unattempted" {% if current_attempt and current_attempt.is_correct is none %}checked{% endif %}>
+            ○ Unattempted
+          </label>
+        </div>
+      </div>
+
+      <!-- Mistake Analysis (Highlighted if Wrong) -->
+      <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: var(--border-radius-sm); margin-bottom: 20px;">
+        <h3 style="color: #991b1b; margin-bottom: 12px; font-size: 1rem;">Mistake Classification (If Wrong)</h3>
+        <div class="grid-cols-2">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="mistake_type" style="color: #991b1b;">Mistake Type</label>
+            <select name="mistake_type" id="mistake_type" class="form-select">
+              <option value="">-- Select Category --</option>
+              {% for mtype in mistake_types %}
+                <option value="{{ mtype }}" {% if current_attempt and current_attempt.mistake_type == mtype %}selected{% endif %}>{{ mtype }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="confidence" style="color: #991b1b;">Confidence Level</label>
+            <select name="confidence" id="confidence" class="form-select">
+              <option value="Low" {% if current_attempt and current_attempt.confidence == 'Low' %}selected{% endif %}>Low</option>
+              <option value="Medium" {% if not current_attempt or current_attempt.confidence == 'Medium' %}selected{% endif %}>Medium</option>
+              <option value="High" {% if current_attempt and current_attempt.confidence == 'High' %}selected{% endif %}>High (Misconception Risk)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="mistake_reason" style="color: #991b1b;">Why did you make this mistake?</label>
+          <textarea id="mistake_reason" name="mistake_reason" class="form-control" placeholder="e.g. I knew that two distinct roots require D > 0, but accidentally used D = 0.">{{ current_attempt.mistake_reason if current_attempt and current_attempt.mistake_reason else '' }}</textarea>
+        </div>
+      </div>
+
+      <!-- Marks, Time, Solution & Tags -->
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="marks_awarded">Marks Awarded</label>
+          <input type="number" step="0.5" id="marks_awarded" name="marks_awarded" class="form-control" value="{{ current_attempt.marks_awarded if current_attempt else 0.0 }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="max_marks">Maximum Marks</label>
+          <input type="number" step="0.5" id="max_marks" name="max_marks" class="form-control" value="{{ current_attempt.max_marks if current_attempt else 4.0 }}">
+        </div>
+      </div>
+
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="time_taken_seconds">Time Taken (Seconds)</label>
+          <input type="number" id="time_taken_seconds" name="time_taken_seconds" class="form-control" placeholder="e.g. 120" value="{{ current_attempt.time_taken_seconds if current_attempt else 120 }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tags">Tags (comma separated)</label>
+          <input type="text" id="tags" name="tags" class="form-control" placeholder="e.g. discriminant, roots, relative-motion" value="{{ current_question.tags|map(attribute='name')|join(', ') if current_question else '' }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="solution">Solution / Explanation (Markdown & LaTeX)</label>
+        <textarea id="solution" name="solution" class="form-control" placeholder="Write steps to solve correctly...">{{ current_question.solution if current_question else '' }}</textarea>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; pt-3; border-top: 1px solid var(--border-color);">
+        {% if q_index > 1 %}
+          <button type="submit" name="nav_action" value="prev" class="btn btn-secondary">&larr; Save & Previous</button>
+        {% else %}
+          <div></div>
+        {% endif %}
+
+        <div style="display: flex; gap: 12px;">
+          <button type="submit" name="nav_action" value="finish" class="btn btn-secondary">Save & Exit</button>
+          <button type="submit" id="btnSaveNext" name="nav_action" value="next" class="btn btn-primary">Save & Next Question &rarr;</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>Study & Error Analysis Dashboard</h1>
+    <p class="subtitle">Identify where marks are lost and ensure weaknesses are actually fixed.</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <a href="{{ url_for('exams.create_exam') }}" class="btn btn-primary">➕ Log New Exam</a>
+    <a href="{{ url_for('review.queue') }}" class="btn btn-secondary">🔁 Review Queue ({{ due_review_count }})</a>
+  </div>
+</div>
+
+<!-- Overview Metric Cards -->
+<div class="grid-cols-4" style="margin-bottom: 32px;">
+  <div class="card stat-card">
+    <span class="stat-label">Total Exams Logged</span>
+    <span class="stat-value">{{ total_exams }}</span>
+  </div>
+  <div class="card stat-card">
+    <span class="stat-label">Questions in Library</span>
+    <span class="stat-value">{{ total_questions }}</span>
+  </div>
+  <div class="card stat-card">
+    <span class="stat-label">Total Attempts</span>
+    <span class="stat-value">{{ total_attempts }}</span>
+  </div>
+  <div class="card stat-card" style="border-left: 4px solid var(--warning);">
+    <span class="stat-label">Due for Active Review</span>
+    <span class="stat-value" style="color: var(--warning);">{{ due_review_count }}</span>
+  </div>
+</div>
+
+<div class="grid-cols-2" style="margin-bottom: 32px;">
+  <!-- Recent Exams Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Recent Exam Attempts</h2>
+      <a href="{{ url_for('exams.list_exams') }}" style="font-size: 0.875rem; font-weight: 600; color: var(--primary); text-decoration: none;">View All &rarr;</a>
+    </div>
+
+    {% if recent_exams %}
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for exam in recent_exams %}
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f8fafc; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">
+                <a href="{{ url_for('exams.exam_result', exam_id=exam.id) }}" style="text-decoration: none; color: inherit;">{{ exam.name }}</a>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                {{ exam.date.strftime('%d %b %Y') if exam.date else '' }}
+                {% if exam.center_rank %} • Center Rank #{{ exam.center_rank }}{% endif %}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">
+                {{ exam.score }} / {{ exam.total_marks }}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                {{ exam.percentage }}%
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 30px 16px;">
+        <div class="empty-state-icon">📝</div>
+        <h3>No exams logged yet</h3>
+        <p>Start by creating your first exam workspace to track questions, scores, and mistakes.</p>
+        <a href="{{ url_for('exams.create_exam') }}" class="btn btn-primary btn-sm">Log First Exam</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Weak Areas Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Needs Attention (Weak Areas)</h2>
+      <a href="{{ url_for('analytics.index') }}" style="font-size: 0.875rem; font-weight: 600; color: var(--primary); text-decoration: none;">Full Analytics &rarr;</a>
+    </div>
+
+    {% if weak_areas %}
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for area in weak_areas %}
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fef2f2; border-radius: var(--border-radius-sm); border: 1px solid #fecaca;">
+            <div>
+              <div style="font-weight: 600; color: #991b1b;">{{ area.subject }} &rarr; {{ area.chapter }}</div>
+              <div style="font-size: 0.8rem; color: #b91c1c;">{{ area.wrong_count }} wrong attempt(s) out of {{ area.total }}</div>
+            </div>
+            <div style="font-weight: 700; font-size: 1.1rem; color: #dc2626;">
+              {{ area.accuracy }}%
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 30px 16px;">
+        <div class="empty-state-icon">🎉</div>
+        <h3>No weak chapters detected</h3>
+        <p>Log more question attempts and exams to automatically surface weak topics here.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Mistake Category Distribution Chart/List -->
+<div class="card">
+  <div class="card-header">
+    <h2>Mistake Category Distribution</h2>
+    <span style="font-size: 0.85rem; color: var(--text-secondary);">Identified root causes of lost marks</span>
+  </div>
+
+  {% if mistake_counts %}
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      {% for type, count in mistake_counts.items() %}
+        <div style="flex: 1 1 200px; padding: 16px; background: #f8fafc; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span class="badge badge-mistake" style="margin-bottom: 4px;">{{ type }}</span>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">Recorded instances</div>
+          </div>
+          <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">{{ count }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state" style="padding: 30px 16px;">
+      <div class="empty-state-icon">🎯</div>
+      <h3>No mistake breakdown yet</h3>
+      <p>When you log wrong questions, record mistake types like Concept Gap or Silly Error to visualize them here.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

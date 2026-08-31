@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Question Detail - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+      <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+        {{ question.chapter.subject.name if question.chapter and question.chapter.subject else '' }} &rarr; {{ question.chapter.name if question.chapter else '' }}
+      </span>
+      <span class="badge badge-{{ question.difficulty|lower }}">{{ question.difficulty }}</span>
+      <span class="badge badge-state-{{ question.review_state|lower }}">{{ question.review_state }}</span>
+    </div>
+    <h1>Question #{{ question.id }} Details</h1>
+  </div>
+  <a href="{{ url_for('questions.bank') }}" class="btn btn-secondary">&larr; Back to Question Bank</a>
+</div>
+
+<div class="grid-cols-2" style="align-items: start;">
+  <!-- Left Side: Question, Answer & Solution -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <!-- Question Statement Card -->
+    <div class="card">
+      <h2>Question Statement</h2>
+      <div class="render-math" style="font-size: 1.05rem; line-height: 1.6; margin-bottom: 16px;">
+        {{ question.question_text if question.question_text else 'No text provided.' }}
+      </div>
+
+      {% if question.image_path %}
+        <div style="margin: 16px 0;">
+          <img src="{{ url_for('static', filename=question.image_path) }}" alt="Question visual" style="max-width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+        </div>
+      {% endif %}
+
+      {% if question.options %}
+        <div style="margin-top: 16px; background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          <h3 style="font-size: 0.95rem; margin-bottom: 8px;">Options:</h3>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px;">
+            {% for opt in question.options %}
+              <li style="display: flex; align-items: center; gap: 8px; font-size: 0.925rem; {% if opt.is_correct %}font-weight: 700; color: var(--success);{% endif %}">
+                <span style="min-width: 24px;">{{ opt.label }}.</span>
+                <span class="render-math">{{ opt.text }}</span>
+                {% if opt.is_correct %}<span class="badge badge-state-mastered">✓ Correct Option</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if question.tags %}
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px;">
+          {% for tag in question.tags %}
+            <span class="tag-pill">#{{ tag.name }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Correct Answer & Solution Card -->
+    <div class="card">
+      <h2>Correct Answer & Solution</h2>
+      {% if question.correct_answer %}
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--success); margin-bottom: 12px; background: var(--success-light); padding: 10px 14px; border-radius: var(--border-radius-sm);">
+          Correct Answer: {{ question.correct_answer }}
+        </div>
+      {% endif %}
+
+      <div class="render-math" style="font-size: 0.95rem; line-height: 1.6; color: var(--text-primary);">
+        {% if question.solution %}
+          {{ question.solution }}
+        {% else %}
+          <em style="color: var(--text-muted);">No detailed solution uploaded.</em>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Chronological Attempt History Timeline -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2>Attempt & Revision History</h2>
+      <a href="{{ url_for('review.session', question_id=question.id) }}" class="btn btn-primary btn-sm">🔁 Practice Active Recall Now</a>
+    </div>
+
+    {% if attempts %}
+      <div class="timeline">
+        {% for att in attempts %}
+          <div class="timeline-item">
+            <div class="timeline-icon {% if att.is_correct == True %}correct{% elif att.is_correct == False %}wrong{% endif %}"></div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="font-weight: 700; font-size: 0.9rem;">
+                  {% if att.attempt_type == 'EXAM' %}
+                    📝 Exam: {{ att.exam.name if att.exam else 'Exam Attempt' }}
+                  {% else %}
+                    🔁 Active Review Session
+                  {% endif %}
+                </div>
+                <div style="font-size: 0.775rem; color: var(--text-secondary);">
+                  {{ att.created_at.strftime('%d %b %Y, %H:%M') if att.created_at else '' }}
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                {% if att.is_correct == True %}
+                  <span class="badge badge-state-mastered">✓ Correct</span>
+                {% elif att.is_correct == False %}
+                  <span class="badge badge-state-wrong">✖ Wrong</span>
+                  {% if att.mistake_type %}
+                    <span class="badge badge-mistake">{{ att.mistake_type }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge badge-state-new">○ Unattempted</span>
+                {% endif %}
+
+                {% if att.confidence %}
+                  <span class="badge" style="background: #e2e8f0; color: var(--text-secondary);">Confidence: {{ att.confidence }}</span>
+                {% endif %}
+              </div>
+
+              {% if att.user_answer %}
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">
+                  User Answer: <strong>{{ att.user_answer }}</strong>
+                </div>
+              {% endif %}
+
+              {% if att.is_correct == False and att.mistake_reason %}
+                <div style="font-size: 0.85rem; color: #991b1b; background: #fef2f2; padding: 8px; border-radius: 4px; margin-top: 6px;">
+                  <strong>Reason:</strong> {{ att.mistake_reason }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 24px;">
+        <p>No attempts recorded for this question yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

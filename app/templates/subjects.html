@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Subjects & Chapters - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h1>Subjects & Chapters</h1>
+  <p class="subtitle">Organize your exam curriculum. Subjects and chapters can be added or adjusted anytime.</p>
+</div>
+
+<div class="grid-cols-2" style="align-items: start;">
+  <!-- Add Forms Card -->
+  <div class="card">
+    <h2>Add Subject / Chapter</h2>
+
+    <!-- Add New Subject -->
+    <form method="POST" action="{{ url_for('main.subjects_list') }}" style="margin-bottom: 28px;">
+      <input type="hidden" name="action" value="add_subject">
+      <div class="form-group">
+        <label class="form-label" for="subj_name">New Subject Name</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="subj_name" name="name" class="form-control" placeholder="e.g. Mathematics, Organic Chemistry" required>
+          <button type="submit" class="btn btn-primary">Add Subject</button>
+        </div>
+      </div>
+    </form>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+    <!-- Add New Chapter -->
+    <form method="POST" action="{{ url_for('main.subjects_list') }}">
+      <input type="hidden" name="action" value="add_chapter">
+      <div class="form-group">
+        <label class="form-label" for="subject_id">Select Subject</label>
+        <select name="subject_id" id="subject_id" class="form-select" required>
+          <option value="">-- Choose Subject --</option>
+          {% for subj in subjects %}
+            <option value="{{ subj.id }}">{{ subj.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="chap_name">New Chapter Name</label>
+        <input type="text" id="chap_name" name="name" class="form-control" placeholder="e.g. Quadratic Functions, Atomic Structure" required>
+      </div>
+      <button type="submit" class="btn btn-secondary" style="width: 100%;">Add Chapter</button>
+    </form>
+  </div>
+
+  <!-- Curriculum Overview Card -->
+  <div class="card">
+    <h2>Current Curriculum</h2>
+    {% if subjects %}
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        {% for subj in subjects %}
+          <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 16px; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="margin: 0; color: var(--primary);">{{ subj.name }}</h3>
+              <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete subject {{ subj.name }} and all its chapters?');">
+                <input type="hidden" name="action" value="delete_subject">
+                <input type="hidden" name="subject_id" value="{{ subj.id }}">
+                <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger);">Delete</button>
+              </form>
+            </div>
+
+            {% if subj.chapters %}
+              <ul style="list-style: none; display: flex; flex-direction: column; gap: 6px;">
+                {% for chap in subj.chapters %}
+                  <li style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 4px; font-size: 0.9rem;">
+                    <span>📖 {{ chap.name }} <span style="font-size: 0.75rem; color: var(--text-muted);">({{ chap.questions|length }} questions)</span></span>
+                    <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete chapter {{ chap.name }}?');">
+                      <input type="hidden" name="action" value="delete_chapter">
+                      <input type="hidden" name="chapter_id" value="{{ chap.id }}">
+                      <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;" title="Delete chapter">&times;</button>
+                    </form>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No chapters added yet for this subject.</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">🏷️</div>
+        <h3>No subjects created yet</h3>
+        <p>Add subjects and chapters to categorize your exam questions and analyze topic-wise mistakes.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

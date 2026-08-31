@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Results - {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>{{ exam.name }}</h1>
+    <p class="subtitle">Exam Attempt Analysis & Summary • Logged on {{ exam.date.strftime('%d %b %Y') if exam.date else '' }}</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <a href="{{ url_for('exams.workspace', exam_id=exam.id, q_index=1) }}" class="btn btn-secondary">✏️ Return to Workspace</a>
+    <a href="{{ url_for('exams.list_exams') }}" class="btn btn-primary">Back to Exams List</a>
+  </div>
+</div>
+
+<!-- Score Header Card -->
+<div class="card" style="margin-bottom: 24px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div>
+      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Final Score</div>
+      <div style="font-size: 3rem; font-weight: 700; color: #ffffff;">
+        {{ exam.score }} <span style="font-size: 1.5rem; font-weight: 400; color: #94a3b8;">/ {{ exam.total_marks }}</span>
+      </div>
+      <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 0.95rem; color: #cbd5e1;">
+        {% if exam.center_rank %}<span>Center Rank: <strong style="color: #60a5fa;">#{{ exam.center_rank }}</strong></span>{% endif %}
+        {% if exam.institution_rank %}<span>Institution Rank: <strong style="color: #a78bfa;">#{{ exam.institution_rank }}</strong></span>{% endif %}
+      </div>
+    </div>
+
+    <div style="text-align: right;">
+      <div style="font-size: 2.8rem; font-weight: 700; color: #34d399;">
+        {{ exam.percentage }}%
+      </div>
+      <div style="font-size: 0.85rem; color: #94a3b8;">Accuracy: {{ accuracy }}%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Stat Cards Grid -->
+<div class="grid-cols-4" style="margin-bottom: 32px;">
+  <div class="card stat-card" style="border-top: 4px solid var(--success);">
+    <span class="stat-label">Correct Questions</span>
+    <span class="stat-value" style="color: var(--success);">{{ correct_cnt }}</span>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--danger);">
+    <span class="stat-label">Wrong Questions</span>
+    <span class="stat-value" style="color: var(--danger);">{{ wrong_cnt }}</span>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--warning);">
+    <span class="stat-label">Total Marks Lost</span>
+    <span class="stat-value" style="color: var(--warning);">-{{ marks_lost }}</span>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--info);">
+    <span class="stat-label">Avg Time / Question</span>
+    <span class="stat-value" style="color: var(--info);">{{ avg_time }}s</span>
+  </div>
+</div>
+
+<!-- Questions Breakdown List -->
+<div class="card">
+  <h2>Questions & Error Analysis</h2>
+  {% if attempts %}
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+      {% for att in attempts %}
+        {% set q = att.question %}
+        <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 16px; background: {% if att.is_correct == False %}#fef2f2{% else %}#ffffff{% endif %};">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-weight: 700; font-size: 1rem;">Q{{ loop.index }}.</span>
+              <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+                {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else '' }}
+              </span>
+              {% if att.is_correct == True %}
+                <span class="badge badge-state-mastered">✓ Correct (+{{ att.marks_awarded }})</span>
+              {% elif att.is_correct == False %}
+                <span class="badge badge-state-wrong">✖ Wrong ({{ att.marks_awarded }}/{{ att.max_marks }})</span>
+                {% if att.mistake_type %}
+                  <span class="badge badge-mistake">{{ att.mistake_type }}</span>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-state-new">○ Unattempted</span>
+              {% endif %}
+            </div>
+
+            <a href="{{ url_for('questions.detail', question_id=q.id) }}" class="btn btn-secondary btn-sm">View Full History &rarr;</a>
+          </div>
+
+          <!-- Question Content snippet -->
+          <div class="render-math" style="font-size: 0.95rem; margin-bottom: 8px; color: var(--text-primary);">
+            {{ q.question_text if q.question_text else '[Image Based Question]' }}
+          </div>
+
+          {% if q.image_path %}
+            <div style="margin: 8px 0;">
+              <img src="{{ url_for('static', filename=q.image_path) }}" alt="Question screenshot" style="max-height: 140px; border-radius: var(--border-radius-sm);">
+            </div>
+          {% endif %}
+
+          {% if att.is_correct == False and att.mistake_reason %}
+            <div style="margin-top: 8px; font-size: 0.875rem; color: #991b1b; background: rgba(239, 68, 68, 0.08); padding: 8px 12px; border-radius: 4px;">
+              <strong>Why wrong?</strong> {{ att.mistake_reason }}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">❓</div>
+      <h3>No questions added to this exam</h3>
+      <a href="{{ url_for('exams.workspace', exam_id=exam.id, q_index=1) }}" class="btn btn-primary">Open Workspace to Add Questions</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

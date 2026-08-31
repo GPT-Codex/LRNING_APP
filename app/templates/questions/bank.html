@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Question Bank - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>Question Library</h1>
+    <p class="subtitle">Search, filter, and inspect past questions across subjects, mistake types, and revision states.</p>
+  </div>
+  <a href="{{ url_for('questions.create_question') }}" class="btn btn-primary">➕ Add Standalone Question</a>
+</div>
+
+<!-- Search & Filters Card -->
+<div class="card" style="margin-bottom: 28px;">
+  <form method="GET" action="{{ url_for('questions.bank') }}">
+    <div style="display: grid; grid-template-columns: 2fr repeat(4, 1fr); gap: 12px; margin-bottom: 12px;">
+      <div>
+        <input type="text" name="q" class="form-control" placeholder="Search text, formula, answer..." value="{{ search_q }}">
+      </div>
+      <div>
+        <select name="subject_id" class="form-select">
+          <option value="">All Subjects</option>
+          {% for s in subjects %}
+            <option value="{{ s.id }}" {% if selected_subject_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <select name="mistake_type" class="form-select">
+          <option value="">All Mistake Types</option>
+          {% for m in mistake_types %}
+            <option value="{{ m }}" {% if selected_mistake_type == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <select name="difficulty" class="form-select">
+          <option value="">All Difficulties</option>
+          <option value="Easy" {% if selected_difficulty == 'Easy' %}selected{% endif %}>Easy</option>
+          <option value="Medium" {% if selected_difficulty == 'Medium' %}selected{% endif %}>Medium</option>
+          <option value="Hard" {% if selected_difficulty == 'Hard' %}selected{% endif %}>Hard</option>
+        </select>
+      </div>
+      <div>
+        <select name="review_state" class="form-select">
+          <option value="">All Review States</option>
+          <option value="New" {% if selected_review_state == 'New' %}selected{% endif %}>New</option>
+          <option value="Wrong" {% if selected_review_state == 'Wrong' %}selected{% endif %}>Wrong</option>
+          <option value="Learning" {% if selected_review_state == 'Learning' %}selected{% endif %}>Learning</option>
+          <option value="Reviewing" {% if selected_review_state == 'Reviewing' %}selected{% endif %}>Reviewing</option>
+          <option value="Mastered" {% if selected_review_state == 'Mastered' %}selected{% endif %}>Mastered</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-size: 0.85rem; color: var(--text-secondary);">
+        Found <strong>{{ questions|length }}</strong> matching question(s)
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <a href="{{ url_for('questions.bank') }}" class="btn btn-secondary btn-sm">Clear Filters</a>
+        <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Question Cards Grid -->
+{% if questions %}
+  <div class="grid-cols-2" style="align-items: start;">
+    {% for q in questions %}
+      {% set last_att = q.latest_attempt %}
+      <div class="card card-hover" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 240px;">
+        <div>
+          <!-- Header Metadata -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 8px;">
+            <div>
+              <span class="badge" style="background: #f1f5f9; color: var(--text-primary); font-size: 0.8rem;">
+                {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else 'General' }}
+              </span>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+              <span class="badge badge-{{ q.difficulty|lower }}">{{ q.difficulty }}</span>
+              <span class="badge badge-state-{{ q.review_state|lower }}">{{ q.review_state }}</span>
+            </div>
+          </div>
+
+          <!-- Question Content -->
+          <div class="render-math" style="font-size: 0.95rem; font-weight: 500; color: var(--text-primary); margin-bottom: 12px; line-height: 1.5; max-height: 120px; overflow: hidden; text-overflow: ellipsis;">
+            {{ q.question_text if q.question_text else '[Image Based Question]' }}
+          </div>
+
+          {% if q.image_path %}
+            <div style="margin-bottom: 12px;">
+              <img src="{{ url_for('static', filename=q.image_path) }}" alt="Question thumbnail" style="max-height: 100px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+            </div>
+          {% endif %}
+        </div>
+
+        <div>
+          <!-- Mistake Badge & Attempt Meta -->
+          {% if last_att and last_att.mistake_type %}
+            <div style="margin-bottom: 10px;">
+              <span class="badge badge-mistake">Last Error: {{ last_att.mistake_type }}</span>
+            </div>
+          {% endif %}
+
+          <!-- Tags -->
+          {% if q.tags %}
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+              {% for tag in q.tags %}
+                <a href="{{ url_for('questions.bank', tag=tag.name) }}" class="tag-pill" style="text-decoration: none;">#{{ tag.name }}</a>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+
+          <!-- Card Footer -->
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-secondary);">
+            <span>
+              ✓ Attempted {{ q.attempt_count }} time(s)
+            </span>
+            <a href="{{ url_for('questions.detail', question_id=q.id) }}" class="btn btn-secondary btn-sm" style="font-weight: 600;">Inspect & History &rarr;</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📚</div>
+    <h3>No questions matched your search</h3>
+    <p>Try clearing filters or adding questions via the Exam Workspace.</p>
+    <a href="{{ url_for('questions.bank') }}" class="btn btn-secondary btn-sm">Reset All Filters</a>
+  </div>
+{% endif %}
+{% endblock %}

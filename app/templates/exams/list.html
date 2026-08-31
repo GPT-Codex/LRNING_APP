@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Exams - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>Exams Log</h1>
+    <p class="subtitle">View and manage all past exam attempts, workspaces, and result analytics.</p>
+  </div>
+  <a href="{{ url_for('exams.create_exam') }}" class="btn btn-primary">➕ Log New Exam</a>
+</div>
+
+{% if exams %}
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    {% for exam in exams %}
+      <div class="card card-hover" style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <h2 style="margin: 0;">
+              <a href="{{ url_for('exams.exam_result', exam_id=exam.id) }}" style="color: var(--text-primary); text-decoration: none;">{{ exam.name }}</a>
+            </h2>
+            <span class="badge" style="background-color: #f1f5f9; color: var(--text-secondary);">📅 {{ exam.date.strftime('%d %b %Y') if exam.date else '' }}</span>
+          </div>
+          <div style="font-size: 0.875rem; color: var(--text-secondary); display: flex; gap: 16px;">
+            {% if exam.center_rank %}<span>Center Rank: <strong>#{{ exam.center_rank }}</strong></span>{% endif %}
+            {% if exam.institution_rank %}<span>Institution Rank: <strong>#{{ exam.institution_rank }}</strong></span>{% endif %}
+            <span>Logged Questions: <strong>{{ exam.attempts|length }}</strong></span>
+          </div>
+          {% if exam.notes %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">{{ exam.notes }}</p>
+          {% endif %}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 24px;">
+          <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">
+              {{ exam.score }} / {{ exam.total_marks }}
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
+              {{ exam.percentage }}%
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <a href="{{ url_for('exams.workspace', exam_id=exam.id, q_index=1) }}" class="btn btn-secondary btn-sm" title="Edit in Workspace">✏️ Workspace</a>
+            <a href="{{ url_for('exams.exam_result', exam_id=exam.id) }}" class="btn btn-primary btn-sm">📊 View Results</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📝</div>
+    <h3>No exams logged yet</h3>
+    <p>Create an exam to log questions, answers, and analyze your error patterns.</p>
+    <a href="{{ url_for('exams.create_exam') }}" class="btn btn-primary">Create Your First Exam</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Exam Question & Mistake Tracker{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- KaTeX Math CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Chart.js for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Persistent Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="logo-icon">🎯</span>
+      <span>MistakeTracker</span>
+    </div>
+
+    <ul class="sidebar-menu">
+      <li class="sidebar-item">
+        <a href="{{ url_for('main.dashboard') }}" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
+          <span>📊</span>
+          <span>Dashboard</span>
+        </a>
+      </li>
+
+      <div class="sidebar-group-title">Exams & Logging</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exams.list_exams') }}" class="sidebar-link {% if active_page == 'exams' %}active{% endif %}">
+          <span>📝</span>
+          <span>Exams</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exams.create_exam') }}" class="sidebar-link {% if active_page == 'new_exam' %}active{% endif %}">
+          <span>➕</span>
+          <span>New Exam</span>
+        </a>
+      </li>
+
+      <div class="sidebar-group-title">Question Library</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('questions.bank') }}" class="sidebar-link {% if active_page == 'question_bank' %}active{% endif %}">
+          <span>📚</span>
+          <span>Question Bank</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('questions.bank', review_state='Wrong') }}" class="sidebar-link {% if active_page == 'wrong_questions' %}active{% endif %}">
+          <span>❌</span>
+          <span>Wrong Questions</span>
+        </a>
+      </li>
+
+      <div class="sidebar-group-title">Revision & Analytics</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('review.queue') }}" class="sidebar-link {% if active_page == 'review' %}active{% endif %}">
+          <span>🔁</span>
+          <span>Review Queue</span>
+          {% if due_review_count > 0 %}
+            <span class="sidebar-badge">{{ due_review_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('analytics.index') }}" class="sidebar-link {% if active_page == 'analytics' %}active{% endif %}">
+          <span>📈</span>
+          <span>Analytics</span>
+        </a>
+      </li>
+
+      <div class="sidebar-group-title">System & Settings</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('main.subjects_list') }}" class="sidebar-link {% if active_page == 'subjects' %}active{% endif %}">
+          <span>🏷️</span>
+          <span>Subjects & Chapters</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('main.export_page') }}" class="sidebar-link {% if active_page == 'export' %}active{% endif %}">
+          <span>💾</span>
+          <span>Backup & Export</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Wrapper -->
+  <div class="main-wrapper">
+    <!-- Topbar for Mobile -->
+    <div class="topbar-mobile">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🎯</span>
+        <span style="font-weight: 700;">MistakeTracker</span>
+      </div>
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Sidebar">☰</button>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-bottom: 24px;">
+            {% for category, message in messages %}
+              <div class="card" style="border-left: 4px solid {% if category == 'error' or category == 'danger' %}var(--danger){% elif category == 'success' %}var(--success){% else %}var(--primary){% endif %}; padding: 12px 16px; margin-bottom: 8px; background: white;">
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
