@@ -49,5 +49,14 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        # Migration check: Add image_path to option table if missing
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        if 'option' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('option')]
+            if 'image_path' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE option ADD COLUMN image_path VARCHAR(255)"))
+                    conn.commit()
 
     return app

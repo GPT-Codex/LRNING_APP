@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models import db, Exam, Question, Attempt, Subject, Chapter, Tag, Option
-from app.utils import save_uploaded_image
+from app.utils import save_uploaded_image, parse_optional_int, parse_optional_float
 from datetime import datetime
 
 exams_bp = Blueprint('exams', __name__)
@@ -32,13 +32,20 @@ def create_exam():
 
         exam_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else datetime.utcnow().date()
 
+        try:
+            c_rank = parse_optional_int(center_rank)
+            i_rank = parse_optional_int(institution_rank)
+        except ValueError as e:
+            flash(str(e), 'error')
+            return redirect(url_for('exams.create_exam'))
+
         exam = Exam(
             name=name,
             date=exam_date,
             total_marks=total_marks,
             score=score,
-            center_rank=int(center_rank) if center_rank else None,
-            institution_rank=int(institution_rank) if institution_rank else None,
+            center_rank=c_rank,
+            institution_rank=i_rank,
             notes=notes
         )
         db.session.add(exam)
@@ -97,7 +104,12 @@ def workspace_save(exam_id):
     is_correct_val = request.form.get('is_correct') # 'true', 'false', 'unattempted'
     marks_awarded = float(request.form.get('marks_awarded') or 0.0)
     max_marks = float(request.form.get('max_marks') or 4.0)
-    time_taken_seconds = int(request.form.get('time_taken_seconds') or 0)
+
+    try:
+        time_taken_seconds = parse_optional_int(request.form.get('time_taken_seconds'))
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('exams.workspace', exam_id=exam.id, q_index=q_index))
     confidence = request.form.get('confidence', 'Medium')
     mistake_type = request.form.get('mistake_type')
     mistake_reason = request.form.get('mistake_reason', '').strip()
@@ -139,12 +151,28 @@ def workspace_save(exam_id):
     if question_type in ['MCQ', 'Multiple Select']:
         Option.query.filter_by(question_id=question.id).delete()
         idx = 0
-        while f'option_text_{idx}' in request.form:
+        while f'option_text_{idx}' in request.form or f'option_image_{idx}' in request.files or f'option_existing_image_{idx}' in request.form:
             opt_text = request.form.get(f'option_text_{idx}', '').strip()
-            if opt_text:
+            opt_img_file = request.files.get(f'option_image_{idx}')
+            existing_img = request.form.get(f'option_existing_image_{idx}', '').strip()
+            remove_img = request.form.get(f'option_remove_image_{idx}') == '1'
+
+            opt_img_path = None
+            if opt_img_file and opt_img_file.filename != '':
+                opt_img_path = save_uploaded_image(opt_img_file)
+            elif not remove_img and existing_img:
+                opt_img_path = existing_img
+
+            if opt_text or opt_img_path:
                 opt_label = chr(65 + idx) if idx < 26 else str(idx + 1)
                 opt_correct = bool(request.form.get(f'option_correct_{idx}'))
-                option = Option(question_id=question.id, label=opt_label, text=opt_text, is_correct=opt_correct)
+                option = Option(
+                    question_id=question.id,
+                    label=opt_label,
+                    text=opt_text or None,
+                    image_path=opt_img_path,
+                    is_correct=opt_correct
+                )
                 db.session.add(option)
             idx += 1
 
@@ -197,7 +225,8 @@ def exam_result(exam_id):
     unattempted_cnt = sum(1 for a in attempts if a.is_correct is None)
     total_cnt = len(attempts)
     marks_lost = sum(a.max_marks - a.marks_awarded for a in attempts if a.is_correct is False)
-    avg_time = round(sum(a.time_taken_seconds or 0 for a in attempts) / total_cnt, 1) if total_cnt > 0 else 0
+    recorded_times = [a.time_taken_seconds for a in attempts if a.time_taken_seconds is not None]
+    avg_time = round(sum(recorded_times) / len(recorded_times), 1) if recorded_times else None
     accuracy = round((correct_cnt / total_cnt) * 100, 1) if total_cnt > 0 else 0
 
     return render_template(

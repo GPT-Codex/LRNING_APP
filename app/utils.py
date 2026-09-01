@@ -10,6 +10,34 @@ from app.models import db, Subject, Chapter, Exam, Question, Attempt, Tag, Optio
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
+def parse_optional_int(val):
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    if isinstance(val, float):
+        return int(val)
+    val_str = str(val).strip()
+    if val_str in ('', '-', '—', 'none', 'null'):
+        return None
+    try:
+        return int(float(val_str))
+    except ValueError:
+        raise ValueError(f"Invalid integer value: {val}")
+
+def parse_optional_float(val):
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
+    val_str = str(val).strip()
+    if val_str in ('', '-', '—', 'none', 'null'):
+        return None
+    try:
+        return float(val_str)
+    except ValueError:
+        raise ValueError(f"Invalid numeric value: {val}")
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 

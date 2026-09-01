@@ -103,13 +103,35 @@ def create_question():
         db.session.add(question)
         db.session.commit()
 
+        # Handle Options
+        if question_type in ['MCQ', 'Multiple Select']:
+            idx = 0
+            while f'option_text_{idx}' in request.form or f'option_image_{idx}' in request.files:
+                opt_text = request.form.get(f'option_text_{idx}', '').strip()
+                opt_img_file = request.files.get(f'option_image_{idx}')
+                opt_img_path = save_uploaded_image(opt_img_file) if opt_img_file else None
+
+                if opt_text or opt_img_path:
+                    opt_label = chr(65 + idx) if idx < 26 else str(idx + 1)
+                    opt_correct = bool(request.form.get(f'option_correct_{idx}'))
+                    option = Option(
+                        question_id=question.id,
+                        label=opt_label,
+                        text=opt_text or None,
+                        image_path=opt_img_path,
+                        is_correct=opt_correct
+                    )
+                    db.session.add(option)
+                idx += 1
+
         # Handle Tags
         if tags_str:
             tag_names = [t.strip().lower() for t in tags_str.split(',') if t.strip()]
             for tname in tag_names:
                 tag = Tag.query.filter_by(name=tname).first() or Tag(name=tname)
                 question.tags.append(tag)
-            db.session.commit()
+
+        db.session.commit()
 
         flash('New question added to library.', 'success')
         return redirect(url_for('questions.detail', question_id=question.id))

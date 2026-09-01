@@ -99,7 +99,8 @@ class Option(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id', ondelete='CASCADE'), nullable=False)
     label = db.Column(db.String(10), nullable=False) # A, B, C, D
-    text = db.Column(db.Text, nullable=False)
+    text = db.Column(db.Text, nullable=True) # Text is optional if image is present
+    image_path = db.Column(db.String(255), nullable=True) # Option specific image
     is_correct = db.Column(db.Boolean, default=False)
 
 class Attempt(db.Model):

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models import db, Question, Attempt
+from app.utils import parse_optional_int
 from datetime import datetime
 
 review_bp = Blueprint('review', __name__)
@@ -42,7 +43,11 @@ def session(question_id):
     if request.method == 'POST':
         user_answer = request.form.get('user_answer', '').strip()
         is_correct_val = request.form.get('is_correct') # 'true' or 'false'
-        time_taken_seconds = int(request.form.get('time_taken_seconds') or 0)
+        try:
+            time_taken_seconds = parse_optional_int(request.form.get('time_taken_seconds'))
+        except ValueError as e:
+            flash(str(e), 'error')
+            return redirect(url_for('review.session', question_id=question.id))
         confidence = request.form.get('confidence', 'Medium')
         mistake_type = request.form.get('mistake_type')
         mistake_reason = request.form.get('mistake_reason', '').strip()

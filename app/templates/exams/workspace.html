@@ -119,22 +119,46 @@
           <label class="form-label" style="margin: 0;">Structured Options (for MCQ / Multiple Select)</label>
           <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">+ Add Option</button>
         </div>
-        <div id="optionsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+        <div id="optionsContainer" style="display: flex; flex-direction: column; gap: 12px;">
           {% if current_question and current_question.options %}
             {% for opt in current_question.options %}
-              <div style="display: flex; align-items: center; gap: 8px;" class="option-row">
-                <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" {% if opt.is_correct %}checked{% endif %} title="Mark as correct">
-                <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
-                <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" value="{{ opt.text }}" placeholder="Option content...">
+              <div style="background: #ffffff; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--border-radius-sm);" class="option-row">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" {% if opt.is_correct %}checked{% endif %} title="Mark as correct">
+                  <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
+                  <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" value="{{ opt.text or '' }}" placeholder="Option {{ opt.label }} text (optional if image present)...">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; margin-left: 32px; flex-wrap: wrap;">
+                  <label style="font-size: 0.8rem; color: var(--text-secondary);">Option Image:</label>
+                  <input type="file" name="option_image_{{ loop.index0 }}" class="form-control" accept="image/*" style="font-size: 0.8rem; padding: 4px; width: auto;">
+
+                  {% if opt.image_path %}
+                    <input type="hidden" name="option_existing_image_{{ loop.index0 }}" value="{{ opt.image_path }}">
+                    <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                      <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option {{ opt.label }} image" style="height: 40px; max-width: 120px; object-fit: contain; border-radius: 4px;">
+                      <label style="font-size: 0.775rem; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <input type="checkbox" name="option_remove_image_{{ loop.index0 }}" value="1">
+                        Remove Image
+                      </label>
+                    </div>
+                  {% endif %}
+                </div>
               </div>
             {% endfor %}
           {% else %}
             <!-- Default 4 Options A, B, C, D -->
             {% for label in ['A', 'B', 'C', 'D'] %}
-              <div style="display: flex; align-items: center; gap: 8px;" class="option-row">
-                <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" title="Mark as correct">
-                <span style="font-weight: 700; min-width: 24px;">{{ label }}.</span>
-                <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" placeholder="Option {{ label }} content...">
+              <div style="background: #ffffff; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--border-radius-sm);" class="option-row">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <input type="checkbox" name="option_correct_{{ loop.index0 }}" value="1" title="Mark as correct">
+                  <span style="font-weight: 700; min-width: 24px;">{{ label }}.</span>
+                  <input type="text" name="option_text_{{ loop.index0 }}" class="form-control" placeholder="Option {{ label }} text (optional if image present)...">
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-left: 32px;">
+                  <label style="font-size: 0.8rem; color: var(--text-secondary);">Option Image:</label>
+                  <input type="file" name="option_image_{{ loop.index0 }}" class="form-control" accept="image/*" style="font-size: 0.8rem; padding: 4px; width: auto;">
+                </div>
               </div>
             {% endfor %}
           {% endif %}

@@ -233,6 +233,17 @@ p.subtitle { color: var(--text-secondary); margin-bottom: 24px; font-size: 0.95r
   font-weight: 500;
 }
 
+/* Solution & Math Formatting Rules */
+.solution-text, .formatted-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+}
+
+.solution-text p {
+  margin-bottom: 0.75em;
+}
+
 /* Badges & Tags */
 .badge {
   display: inline-flex;

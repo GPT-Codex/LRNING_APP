@@ -30,12 +30,11 @@ def run_seed():
     tag_param = Tag(name="parameter")
     tag_rel = Tag(name="relative-motion")
     tag_calc = Tag(name="calculation")
-    tag_organic = Tag(name="organic")
 
-    db.session.add_all([tag_disc, tag_roots, tag_param, tag_rel, tag_calc, tag_organic])
+    db.session.add_all([tag_disc, tag_roots, tag_param, tag_rel, tag_calc])
     db.session.commit()
 
-    # 4. Create Exams
+    # 4. Create Exams (one with unknown center_rank)
     exam1 = Exam(
         name="JEE Full Mock Test #1",
         date=date.today() - timedelta(days=14),
@@ -51,7 +50,7 @@ def run_seed():
         date=date.today() - timedelta(days=5),
         total_marks=80.0,
         score=62.0,
-        center_rank=2,
+        center_rank=None, # Unknown / Not recorded center rank
         institution_rank=8,
         notes="Improvement in Relative motion. Need to re-read Bohr model assumptions."
     )
@@ -59,15 +58,35 @@ def run_seed():
     db.session.add_all([exam1, exam2])
     db.session.commit()
 
-    # 5. Create Questions & Attempts
-    # Question 1: Quadratic Discriminant (Wrong attempt -> Recognition Error)
+    # 5. Create Questions
+    # Question 1: Quadratic Discriminant with Multiline Solution
+    multiline_solution = """Since,
+
+the discriminant is given by:
+
+$$
+D = b^2 - 4ac
+$$
+
+We can analyze the roots as follows:
+- When D > 0, roots are real and distinct.
+- When D = 0, roots are real and equal.
+- When D < 0, roots are complex conjugate pairs.
+
+Therefore, for $x^2 - 2kx + (k^2 - 1) = 0$:
+$$
+D = (-2k)^2 - 4(1)(k^2-1) = 4 > 0
+$$
+
+Conclusion: $k \\in \\mathbb{R}$."""
+
     q1 = Question(
         chapter_id=ch_quad.id,
         question_text="Find the set of values of $k$ for which the quadratic equation $x^2 - 2kx + (k^2 - 1) = 0$ has two distinct real roots.",
         question_type="MCQ",
         difficulty="Hard",
         correct_answer="D",
-        solution="For distinct real roots, the discriminant $D > 0$. Here $a=1, b=-2k, c=k^2-1$. Thus $D = (-2k)^2 - 4(1)(k^2-1) = 4k^2 - 4k^2 + 4 = 4 > 0$. This is true for all $k \\in \\mathbb{R}$.",
+        solution=multiline_solution,
         review_state="Learning"
     )
     q1.tags.extend([tag_disc, tag_roots, tag_param])
@@ -109,14 +128,14 @@ def run_seed():
         created_at=datetime.utcnow() - timedelta(days=2)
     )
 
-    # Question 2: Relative Velocity in Physics (Correct attempt)
+    # Question 2: Relative Velocity with unknown time taken in Attempt
     q2 = Question(
         chapter_id=ch_rel.id,
         question_text="Two trains A and B of length 100m moving in opposite directions on parallel tracks cross each other with velocities $v_A = 20\\text{ m/s}$ and $v_B = 30\\text{ m/s}$. Find the time taken to completely cross each other.",
         question_type="MCQ",
         difficulty="Medium",
         correct_answer="A",
-        solution="Relative velocity $v_{rel} = v_A + v_B = 20 + 30 = 50\\text{ m/s}$. Total distance to cover $d = 100 + 100 = 200\\text{ m}$. Time $t = d / v_{rel} = 200 / 50 = 4\\text{ s}$.",
+        solution="Relative velocity $v_{rel} = v_A + v_B = 20 + 30 = 50\\text{ m/s}$.\nTotal distance $d = 200\\text{ m}$.\nTime $t = 200 / 50 = 4\\text{ s}$.",
         review_state="Mastered"
     )
     q2.tags.extend([tag_rel, tag_calc])
@@ -137,39 +156,10 @@ def run_seed():
         is_correct=True,
         marks_awarded=4.0,
         max_marks=4.0,
-        time_taken_seconds=65,
+        time_taken_seconds=None, # Unknown / Not recorded time
         confidence="High",
         created_at=datetime.utcnow() - timedelta(days=14)
     )
 
-    # Question 3: Atomic Structure Bohr Radius (Wrong -> Concept Gap)
-    q3 = Question(
-        chapter_id=ch_atom.id,
-        question_text="What is the ratio of the radius of the $n=2$ orbit of $\\text{Li}^{2+}$ to the $n=1$ orbit of Hydrogen?",
-        question_type="Numerical",
-        difficulty="Hard",
-        correct_answer="1.33",
-        solution="Bohr orbit radius formula: $r_n \\propto \\frac{n^2}{Z}$. For $\\text{Li}^{2+}$ ($Z=3, n=2$), $r_1 = \\frac{4}{3} = 1.333$. For Hydrogen ($Z=1, n=1$), $r_2 = 1$. Ratio is $4/3 = 1.33$.",
-        review_state="Wrong"
-    )
-
-    db.session.add(q3)
-    db.session.commit()
-
-    att3 = Attempt(
-        question_id=q3.id,
-        exam_id=exam2.id,
-        attempt_type="EXAM",
-        user_answer="4.0",
-        is_correct=False,
-        marks_awarded=0.0,
-        max_marks=4.0,
-        time_taken_seconds=180,
-        confidence="High",
-        mistake_type="Concept Gap",
-        mistake_reason="Forgot that radius formula includes division by atomic number Z for hydrogen-like ions.",
-        created_at=datetime.utcnow() - timedelta(days=5)
-    )
-
-    db.session.add_all([att1_1, att1_2, att2, att3])
+    db.session.add_all([att1_1, att1_2, att2])
     db.session.commit()

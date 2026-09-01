@@ -33,12 +33,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const label = labels[optionCount] || `Opt ${optionCount + 1}`;
 
       const div = document.createElement("div");
-      div.className = "flex-row align-center gap-2 form-group option-row";
+      div.className = "option-card-row";
+      div.style.cssText = "background: #ffffff; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--border-radius-sm); margin-bottom: 8px;";
       div.innerHTML = `
-        <input type="checkbox" name="option_correct_${optionCount}" value="1" title="Mark as correct">
-        <span class="font-bold" style="min-width: 24px;">${label}.</span>
-        <input type="text" name="option_text_${optionCount}" class="form-control" placeholder="Option ${label} content...">
-        <button type="button" class="btn btn-secondary btn-sm remove-option-btn">&times;</button>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <input type="checkbox" name="option_correct_${optionCount}" value="1" title="Mark as correct">
+          <span style="font-weight: 700; min-width: 24px;">${label}.</span>
+          <input type="text" name="option_text_${optionCount}" class="form-control" placeholder="Option ${label} text (optional if image present)...">
+          <button type="button" class="btn btn-secondary btn-sm remove-option-btn" title="Remove Option">&times;</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: 32px;">
+          <label style="font-size: 0.8rem; color: var(--text-secondary);">Option Image:</label>
+          <input type="file" name="option_image_${optionCount}" class="form-control" accept="image/*" style="font-size: 0.8rem; padding: 4px;">
+        </div>
       `;
       optionsContainer.appendChild(div);
 

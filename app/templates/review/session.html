@@ -35,15 +35,24 @@
 
     {% if question.options %}
       <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
-        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Options:</h3>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px;">
+        <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Options:</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
           {% for opt in question.options %}
-            <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+            <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; background: #ffffff; padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
               <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
-              <span class="render-math">{{ opt.text }}</span>
-            </li>
+              <div style="flex: 1;">
+                {% if opt.text %}
+                  <div class="render-math" style="margin-bottom: 4px;">{{ opt.text }}</div>
+                {% endif %}
+                {% if opt.image_path %}
+                  <div>
+                    <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option {{ opt.label }} image" style="max-height: 160px; max-width: 100%; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color);" onclick="window.open(this.src)" title="Click to view image" cursor="pointer">
+                  </div>
+                {% endif %}
+              </div>
+            </div>
           {% endfor %}
-        </ul>
+        </div>
       </div>
     {% endif %}
 
@@ -61,7 +70,7 @@
       {% if question.solution %}
         <div style="margin-bottom: 16px;" class="render-math">
           <strong>Solution & Explanation:</strong>
-          <div style="margin-top: 6px; font-size: 0.95rem; line-height: 1.6;">{{ question.solution }}</div>
+          <div class="solution-text" style="margin-top: 6px; font-size: 0.95rem;">{{ question.solution }}</div>
         </div>
       {% endif %}
 
