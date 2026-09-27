@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Templates - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h1>Exam Templates</h1>
+  <p class="subtitle">Manage reusable practice test configurations and custom difficulty patterns.</p>
+</div>
+
+<div class="grid-cols-2" style="align-items: start;">
+  <!-- Create New Custom Template Form -->
+  <div class="card">
+    <h2>Create Custom Template</h2>
+    <form method="POST" action="{{ url_for('exam_taker.templates') }}">
+      <input type="hidden" name="action" value="create">
+
+      <div class="form-group">
+        <label class="form-label" for="name">Template Name *</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Quick 30m Physics Sprint" required>
+      </div>
+
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="duration_minutes">Duration (Minutes)</label>
+          <input type="number" id="duration_minutes" name="duration_minutes" class="form-control" value="45" min="5" max="300" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="total_questions">Total Questions</label>
+          <input type="number" id="total_questions" name="total_questions" class="form-control" value="20" min="1" max="100" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Create Custom Template</button>
+    </form>
+  </div>
+
+  <!-- Templates List Card -->
+  <div class="card">
+    <h2>Saved Templates</h2>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      {% for tmpl in templates %}
+        <div style="padding: 16px; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div>
+              <h3 style="margin: 0; color: var(--primary);">{{ tmpl.name }}</h3>
+              <div style="font-size: 0.825rem; color: var(--text-secondary); margin-top: 2px;">
+                ⏱️ {{ tmpl.duration_minutes }} mins • ❓ {{ tmpl.total_questions }} Questions
+              </div>
+            </div>
+
+            {% if tmpl.is_default %}
+              <span class="badge badge-state-mastered">Built-in Default</span>
+            {% else %}
+              <form method="POST" action="{{ url_for('exam_taker.templates') }}" onsubmit="return confirm('Delete template {{ tmpl.name }}?');">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="template_id" value="{{ tmpl.id }}">
+                <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger);">Delete</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models import db, Question, Subject, Chapter, Exam, Attempt, Tag, Option
-from app.utils import save_uploaded_image
+from app.utils import save_uploaded_image, sort_subjects, sort_chapters
 
 questions_bp = Blueprint('questions', __name__)
 
@@ -136,5 +136,10 @@ def create_question():
         flash('New question added to library.', 'success')
         return redirect(url_for('questions.detail', question_id=question.id))
 
-    chapters = Chapter.query.order_by(Chapter.name).all()
-    return render_template('questions/form.html', active_page='question_bank', chapters=chapters)
+    subjects = sort_subjects(Subject.query.all())
+    subjects_data = [{
+        'id': s.id,
+        'name': s.name,
+        'sorted_chapters': [{'id': c.id, 'name': c.name} for c in sort_chapters(s.chapters)]
+    } for s in subjects]
+    return render_template('questions/form.html', active_page='question_bank', subjects=subjects, subjects_data=subjects_data)

@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import csv
 import io
@@ -9,6 +10,17 @@ from flask import current_app
 from app.models import db, Subject, Chapter, Exam, Question, Attempt, Tag, Option
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+
+def natural_sort_key(text):
+    if not text:
+        return []
+    return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', str(text))]
+
+def sort_chapters(chapters):
+    return sorted(chapters, key=lambda c: (c.priority if c.priority is not None else 1, natural_sort_key(c.name)))
+
+def sort_subjects(subjects):
+    return sorted(subjects, key=lambda s: natural_sort_key(s.name))
 
 def parse_optional_int(val):
     if val is None:

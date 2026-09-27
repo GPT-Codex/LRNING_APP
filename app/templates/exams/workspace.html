@@ -83,17 +83,26 @@
         </div>
       </div>
 
-      <!-- Subject / Chapter Selection -->
-      <div class="form-group">
-        <label class="form-label" for="chapter_id">Chapter & Subject *</label>
-        <select name="chapter_id" id="chapter_id" class="form-select" required>
-          <option value="">-- Choose Chapter --</option>
-          {% for ch in chapters %}
-            <option value="{{ ch.id }}" {% if current_question and current_question.chapter_id == ch.id %}selected{% endif %}>
-              {{ ch.subject.name }} &rarr; {{ ch.name }}
-            </option>
-          {% endfor %}
-        </select>
+      <!-- Two-Step Dependent Subject -> Chapter Selection -->
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="subject_id">Subject *</label>
+          <select id="subject_id" class="form-select" required>
+            <option value="">-- Choose Subject --</option>
+            {% for s in subjects %}
+              <option value="{{ s.id }}" {% if current_question and current_question.chapter and current_question.chapter.subject_id == s.id %}selected{% endif %}>
+                {{ s.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="chapter_id">Chapter *</label>
+          <select name="chapter_id" id="chapter_id" class="form-select" data-selected-chapter="{{ current_question.chapter_id if current_question else '' }}" required disabled>
+            <option value="">[ Select a subject first ]</option>
+          </select>
+        </div>
       </div>
 
       <!-- Question Text & LaTeX -->
@@ -269,4 +278,13 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const subjectsData = {{ subjects_data|tojson }};
+  setupDependentSubjectChapter("subject_id", "chapter_id", subjectsData);
+});
+</script>
 {% endblock %}

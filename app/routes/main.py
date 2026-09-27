@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from app.models import db, Subject, Chapter, Exam, Question, Attempt, Tag
-from app.utils import export_all_data_json, export_attempts_csv, export_exams_csv, export_questions_csv
+from app.utils import export_all_data_json, export_attempts_csv, export_exams_csv, export_questions_csv, sort_chapters, sort_subjects, parse_optional_int
 from sqlalchemy import func
 
 main_bp = Blueprint('main', __name__)
@@ -75,10 +75,27 @@ def subjects_list():
             subject_id = request.form.get('subject_id')
             name = request.form.get('name', '').strip()
             if subject_id and name:
-                chap = Chapter(subject_id=subject_id, name=name)
+                # Default priority based on existing chapter count under this subject
+                existing_cnt = Chapter.query.filter_by(subject_id=subject_id).count()
+                chap = Chapter(subject_id=subject_id, name=name, priority=existing_cnt + 1)
                 db.session.add(chap)
                 db.session.commit()
-                flash(f'Chapter "{name}" added successfully.', 'success')
+                flash(f'Chapter "{name}" added with priority {chap.priority}.', 'success')
+        elif action == 'update_priorities':
+            # Update chapter priorities from form inputs
+            for key, val in request.form.items():
+                if key.startswith('priority_'):
+                    chap_id = key.split('priority_')[1]
+                    chap = Chapter.query.get(chap_id)
+                    if chap:
+                        try:
+                            p_val = parse_optional_int(val)
+                            if p_val is not None and p_val > 0:
+                                chap.priority = p_val
+                        except ValueError:
+                            pass
+            db.session.commit()
+            flash('Chapter priorities updated successfully.', 'success')
         elif action == 'delete_subject':
             subject_id = request.form.get('subject_id')
             subj = Subject.query.get_or_404(subject_id)
@@ -93,7 +110,10 @@ def subjects_list():
             flash('Chapter deleted.', 'success')
         return redirect(url_for('main.subjects_list'))
 
-    subjects = Subject.query.order_by(Subject.name).all()
+    subjects = sort_subjects(Subject.query.all())
+    # Attach sorted chapters to each subject object for view rendering
+    for s in subjects:
+        s.sorted_chapters = sort_chapters(s.chapters)
     return render_template('subjects.html', active_page='subjects', subjects=subjects)
 
 @main_bp.route('/export')

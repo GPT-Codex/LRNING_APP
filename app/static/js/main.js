@@ -87,3 +87,51 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+// Dependent Subject -> Chapter selector logic
+function setupDependentSubjectChapter(subjectElemId, chapterElemId, subjectsData) {
+  const subjectElem = document.getElementById(subjectElemId);
+  const chapterElem = document.getElementById(chapterElemId);
+  if (!subjectElem || !chapterElem) return;
+
+  function updateChapters() {
+    const selectedSubjId = subjectElem.value;
+    const currentSelectedChapId = chapterElem.dataset.selectedChapter || chapterElem.value;
+    chapterElem.innerHTML = '';
+
+    if (!selectedSubjId) {
+      chapterElem.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '[ Select a subject first ]';
+      chapterElem.appendChild(opt);
+      return;
+    }
+
+    chapterElem.disabled = false;
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = '-- Choose Chapter --';
+    chapterElem.appendChild(placeholderOpt);
+
+    const subj = subjectsData.find(s => String(s.id) === String(selectedSubjId));
+    if (subj && subj.sorted_chapters) {
+      subj.sorted_chapters.forEach(ch => {
+        const opt = document.createElement('option');
+        opt.value = ch.id;
+        opt.textContent = ch.name;
+        if (String(currentSelectedChapId) === String(ch.id)) {
+          opt.selected = true;
+        }
+        chapterElem.appendChild(opt);
+      });
+    }
+  }
+
+  subjectElem.addEventListener('change', function() {
+    chapterElem.dataset.selectedChapter = '';
+    updateChapters();
+  });
+
+  updateChapters();
+}

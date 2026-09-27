@@ -85,6 +85,14 @@
         </a>
       </li>
 
+      <div class="sidebar-group-title">Exam Practice</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exam_taker.landing') }}" class="sidebar-link {% if active_page == 'exam_taker' %}active{% endif %}">
+          <span>⚡</span>
+          <span>Exam Taker</span>
+        </a>
+      </li>
+
       <div class="sidebar-group-title">System & Settings</div>
       <li class="sidebar-item">
         <a href="{{ url_for('main.subjects_list') }}" class="sidebar-link {% if active_page == 'subjects' %}active{% endif %}">

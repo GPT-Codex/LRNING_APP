@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ session.name }} - Active Exam{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div>
+    <h1>{{ session.name }}</h1>
+    <p class="subtitle" style="margin-bottom: 0;">Question {{ q_index }} of {{ q_ids|length }}</p>
+  </div>
+
+  <!-- Countdown Timer Box -->
+  <div id="timerContainer" style="background: #0f172a; color: #ffffff; padding: 10px 20px; border-radius: var(--border-radius); font-weight: 700; font-size: 1.25rem; font-family: var(--font-mono); display: flex; align-items: center; gap: 8px;">
+    <span>⏱️</span>
+    <span id="countdownDisplay">00:00</span>
+  </div>
+</div>
+
+<div class="workspace-container">
+  <!-- Left Side: Question Palette -->
+  <div class="question-nav-panel">
+    <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; display: flex; justify-content: space-between;">
+      <span>Question Palette</span>
+      <span class="badge" style="background: #f1f5f9; color: var(--text-secondary);">{{ q_ids|length }}</span>
+    </div>
+
+    <div class="question-grid">
+      {% for qid in q_ids %}
+        {% set resp = responses.get(qid) %}
+        <a href="{{ url_for('exam_taker.session', session_id=session.id, q_index=loop.index) }}"
+           class="q-nav-btn {% if loop.index == q_index %}active{% endif %} {% if resp and resp.user_answer %}completed{% endif %}">
+          {{ loop.index }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+    <form method="POST" action="{{ url_for('exam_taker.submit_exam', session_id=session.id) }}" onsubmit="return confirm('Are you sure you want to submit your exam session?');">
+      <button type="submit" class="btn btn-danger" style="width: 100%; font-weight: 700;">Submit Exam Now</button>
+    </form>
+  </div>
+
+  <!-- Right Side: Active Question Card -->
+  <div class="card" style="box-shadow: var(--shadow);">
+    {% if current_q %}
+      <form id="activeQuestionForm" method="POST" action="{{ url_for('exam_taker.save_answer', session_id=session.id) }}">
+        <input type="hidden" name="question_id" value="{{ current_q.id }}">
+        <input type="hidden" name="q_index" value="{{ q_index }}">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+          <span style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary);">Question #{{ q_index }}</span>
+          <span class="badge" style="background: #f1f5f9; color: var(--text-secondary);">
+            {{ current_q.chapter.subject.name if current_q.chapter and current_q.chapter.subject else '' }} &rarr; {{ current_q.chapter.name if current_q.chapter else '' }}
+          </span>
+        </div>
+
+        <div class="render-math" style="font-size: 1.1rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 20px;">
+          {{ current_q.question_text if current_q.question_text else 'Inspect image below:' }}
+        </div>
+
+        {% if current_q.image_path %}
+          <div style="margin-bottom: 20px;">
+            <img src="{{ url_for('static', filename=current_q.image_path) }}" alt="Question visual" style="max-width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          </div>
+        {% endif %}
+
+        <!-- Answer Section -->
+        <div style="background: #f8fafc; padding: 20px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 24px;">
+          <h3 style="font-size: 1rem; margin-bottom: 12px;">Your Answer:</h3>
+
+          {% if current_q.question_type in ['MCQ', 'Multiple Select'] and current_q.options %}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              {% for opt in current_q.options %}
+                <label style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 14px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); cursor: pointer;">
+                  <input type="radio" name="user_answer" value="{{ opt.label }}" {% if current_resp and current_resp.user_answer == opt.label %}checked{% endif %} style="margin-top: 4px;">
+                  <span style="font-weight: 700; min-width: 20px;">{{ opt.label }}.</span>
+                  <div style="flex: 1;">
+                    {% if opt.text %}<div class="render-math">{{ opt.text }}</div>{% endif %}
+                    {% if opt.image_path %}
+                      <div style="margin-top: 4px;">
+                        <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option image" style="max-height: 140px; border-radius: 4px;">
+                      </div>
+                    {% endif %}
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          {% else %}
+            <!-- Numerical or Subjective Text Input -->
+            <input type="text" name="user_answer" class="form-control" placeholder="Type your numerical answer..." value="{{ current_resp.user_answer if current_resp and current_resp.user_answer else '' }}" style="max-width: 320px; font-size: 1.1rem; font-weight: 600;">
+          {% endif %}
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); pt-3;">
+          {% if q_index > 1 %}
+            <button type="submit" name="nav_action" value="prev" class="btn btn-secondary">&larr; Save & Previous</button>
+          {% else %}
+            <div></div>
+          {% endif %}
+
+          <div style="display: flex; gap: 12px;">
+            <button type="submit" name="nav_action" value="next" class="btn btn-primary">Save & Next Question &rarr;</button>
+          </div>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let remainingSeconds = {{ remaining_seconds }};
+  const display = document.getElementById("countdownDisplay");
+  const container = document.getElementById("timerContainer");
+
+  function updateTimer() {
+    if (remainingSeconds <= 0) {
+      display.textContent = "00:00";
+      window.location.href = "{{ url_for('exam_taker.submit_exam', session_id=session.id) }}";
+      return;
+    }
+
+    const m = Math.floor(remainingSeconds / 60);
+    const s = remainingSeconds % 60;
+    display.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    if (remainingSeconds < 300) {
+      container.style.backgroundColor = "var(--danger)";
+    }
+
+    remainingSeconds--;
+  }
+
+  updateTimer();
+  setInterval(updateTimer, 1000);
+});
+</script>
+{% endblock %}

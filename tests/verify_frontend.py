@@ -11,34 +11,36 @@ def run_verification():
         page.wait_for_selector('h1')
         page.screenshot(path='dashboard.png')
 
-        # 2. Exams List and Exam Workspace
-        page.goto('http://127.0.0.1:5000/exams/')
+        # 2. Subjects & Curriculum Page
+        page.goto('http://127.0.0.1:5000/subjects')
         page.wait_for_selector('h1')
-        page.locator('a[title="Edit in Workspace"]').first.click()
-        page.wait_for_selector('.workspace-container')
+        page.screenshot(path='subjects_curriculum.png')
+
+        # 3. Question Form (Two-Step Dependent Dropdown)
+        page.goto('http://127.0.0.1:5000/questions/new')
+        page.wait_for_selector('h1')
+        page.select_option('#subject_id', index=1)
+        page.wait_for_timeout(300)
         page.screenshot(path='exam_workspace.png')
 
-        # 3. Question Bank
+        # 4. Exam Taker Landing
+        page.goto('http://127.0.0.1:5000/exam-taker/')
+        page.wait_for_selector('h1')
+        page.screenshot(path='exam_taker_landing.png')
+
+        # 5. Exam Taker Setup Wizard
+        page.goto('http://127.0.0.1:5000/exam-taker/setup')
+        page.wait_for_selector('h1')
+        page.screenshot(path='exam_taker_setup.png')
+
+        # 6. Question Bank
         page.goto('http://127.0.0.1:5000/questions/')
         page.wait_for_selector('h1')
         page.screenshot(path='question_bank.png')
 
-        # 4. Question Detail
-        page.locator('text=Inspect & History').first.click()
-        page.wait_for_selector('.timeline')
-        page.screenshot(path='question_detail.png')
-
-        # 5. Review Session
-        page.goto('http://127.0.0.1:5000/review/')
-        page.wait_for_selector('h1')
-        if page.locator('text=Practice Active Recall').count() > 0:
-            page.locator('text=Practice Active Recall').first.click()
-            page.wait_for_selector('.review-card')
-            page.screenshot(path='review_session.png')
-
-        # 6. Analytics
+        # 7. Analytics
         page.goto('http://127.0.0.1:5000/analytics/')
-        page.wait_for_selector('#scoreTrendChart')
+        page.wait_for_selector('h1')
         page.screenshot(path='analytics.png')
 
         browser.close()

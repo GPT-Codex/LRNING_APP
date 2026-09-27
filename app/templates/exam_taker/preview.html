@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Preview Summary - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width: 720px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <h1>Exam Preview Summary</h1>
+    <p class="subtitle">Review generated practice test parameters before beginning your timed exam session.</p>
+  </div>
+
+  <div class="card" style="box-shadow: var(--shadow-md);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+      <h2 style="margin: 0; color: var(--primary);">{{ session.name }}</h2>
+      <span class="badge badge-state-reviewing" style="font-size: 0.85rem;">Ready to Start</span>
+    </div>
+
+    <div class="grid-cols-2" style="margin-bottom: 20px;">
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Duration</div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">⏱️ {{ session.duration_minutes }} Minutes</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total Questions</div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">❓ {{ session.total_questions }} Questions</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <h3>Scope & Configuration</h3>
+      <div style="display: flex; gap: 12px; font-size: 0.9rem; margin-top: 6px;">
+        <span class="badge" style="background: #e2e8f0; color: var(--text-primary);">Scope: {{ session.scope_type }}</span>
+        <span class="badge badge-{{ session.difficulty_mode|lower }}">Difficulty Target: {{ session.difficulty_mode }}</span>
+      </div>
+    </div>
+
+    {% if subject_counts %}
+      <div style="margin-bottom: 24px; background: #ffffff; border: 1px solid var(--border-color); padding: 16px; border-radius: var(--border-radius-sm);">
+        <h3 style="font-size: 0.925rem; margin-bottom: 10px;">Question Pool Subject Distribution:</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          {% for sname, count in subject_counts.items() %}
+            <span class="badge" style="background: #f1f5f9; color: var(--text-primary); padding: 6px 12px;">
+              {{ sname }}: <strong>{{ count }} Qs</strong>
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); pt-3; margin-top: 20px;">
+      <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-secondary">&larr; Back to Setup</a>
+
+      <form method="POST" action="{{ url_for('exam_taker.start_exam', session_id=session.id) }}">
+        <button type="submit" class="btn btn-success" style="padding: 12px 28px; font-size: 1rem;">
+          ▶ Start Timed Practice Exam
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

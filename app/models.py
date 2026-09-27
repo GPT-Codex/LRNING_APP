@@ -29,6 +29,7 @@ class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id', ondelete='CASCADE'), nullable=False)
     name = db.Column(db.String(150), nullable=False)
+    priority = db.Column(db.Integer, nullable=False, default=1)
 
     questions = db.relationship('Question', backref='chapter', lazy=True)
 
@@ -133,3 +134,51 @@ class Attempt(db.Model):
         'Guess',
         'Incomplete'
     ]
+
+class ExamTemplate(db.Model):
+    __tablename__ = 'exam_template'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False, default=60)
+    total_questions = db.Column(db.Integer, nullable=False, default=30)
+    pattern_json = db.Column(db.Text, nullable=False) # JSON list of pattern sections
+    difficulty_json = db.Column(db.Text, nullable=False) # JSON dict of difficulty distributions
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ExamSession(db.Model):
+    __tablename__ = 'exam_session'
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('exam_template.id', ondelete='SET NULL'), nullable=True)
+    name = db.Column(db.String(150), nullable=False, default="Generated Practice Exam")
+    duration_minutes = db.Column(db.Integer, nullable=False, default=60)
+    total_questions = db.Column(db.Integer, nullable=False, default=30)
+    scope_type = db.Column(db.String(30), nullable=False, default='All Mixed') # Subjectwise, Chapterwise, All Mixed
+    selected_subjects_json = db.Column(db.Text, nullable=True) # JSON list of subject IDs
+    selected_chapters_json = db.Column(db.Text, nullable=True) # JSON list of chapter IDs
+    difficulty_mode = db.Column(db.String(20), nullable=False, default='Medium') # Easy, Medium, Hard
+    pattern_json = db.Column(db.Text, nullable=True)
+    questions_json = db.Column(db.Text, nullable=True) # Ordered list of question IDs
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True) # Intended end time
+    submit_time = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Float, nullable=False, default=0.0)
+    total_marks = db.Column(db.Float, nullable=False, default=0.0)
+    status = db.Column(db.String(30), nullable=False, default='Created') # Created, Active, Submitted, TimedOut
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    template = db.relationship('ExamTemplate')
+    responses = db.relationship('ExamSessionResponse', backref='session', cascade='all, delete-orphan', lazy=True)
+
+class ExamSessionResponse(db.Model):
+    __tablename__ = 'exam_session_response'
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('exam_session.id', ondelete='CASCADE'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id', ondelete='CASCADE'), nullable=False)
+    user_answer = db.Column(db.Text, nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+    marks_awarded = db.Column(db.Float, nullable=False, default=0.0)
+    time_taken_seconds = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    question = db.relationship('Question')

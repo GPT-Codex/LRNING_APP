@@ -11,14 +11,24 @@
 
   <div class="card">
     <form method="POST" action="{{ url_for('questions.create_question') }}" enctype="multipart/form-data">
-      <div class="form-group">
-        <label class="form-label" for="chapter_id">Chapter *</label>
-        <select name="chapter_id" id="chapter_id" class="form-select" required>
-          <option value="">-- Choose Chapter --</option>
-          {% for ch in chapters %}
-            <option value="{{ ch.id }}">{{ ch.subject.name }} &rarr; {{ ch.name }}</option>
-          {% endfor %}
-        </select>
+      <!-- Two-Step Dependent Subject -> Chapter Selection -->
+      <div class="grid-cols-2">
+        <div class="form-group">
+          <label class="form-label" for="subject_id">Subject *</label>
+          <select id="subject_id" class="form-select" required>
+            <option value="">-- Choose Subject --</option>
+            {% for s in subjects %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="chapter_id">Chapter *</label>
+          <select name="chapter_id" id="chapter_id" class="form-select" required disabled>
+            <option value="">[ Select a subject first ]</option>
+          </select>
+        </div>
       </div>
 
       <div class="grid-cols-2">
@@ -97,4 +107,13 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const subjectsData = {{ subjects_data|tojson }};
+  setupDependentSubjectChapter("subject_id", "chapter_id", subjectsData);
+});
+</script>
 {% endblock %}

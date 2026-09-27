@@ -5,7 +5,7 @@
 {% block content %}
 <div style="margin-bottom: 24px;">
   <h1>Subjects & Chapters</h1>
-  <p class="subtitle">Organize your exam curriculum. Subjects and chapters can be added or adjusted anytime.</p>
+  <p class="subtitle">Organize your exam curriculum. Set chapter priorities, expand subjects, and manage topics.</p>
 </div>
 
 <div class="grid-cols-2" style="align-items: start;">
@@ -19,7 +19,7 @@
       <div class="form-group">
         <label class="form-label" for="subj_name">New Subject Name</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="subj_name" name="name" class="form-control" placeholder="e.g. Mathematics, Organic Chemistry" required>
+          <input type="text" id="subj_name" name="name" class="form-control" placeholder="e.g. Mathematics, Chemistry" required>
           <button type="submit" class="btn btn-primary">Add Subject</button>
         </div>
       </div>
@@ -47,48 +47,93 @@
     </form>
   </div>
 
-  <!-- Curriculum Overview Card -->
-  <div class="card">
-    <h2>Current Curriculum</h2>
-    {% if subjects %}
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        {% for subj in subjects %}
-          <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 16px; background: #ffffff;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h3 style="margin: 0; color: var(--primary);">{{ subj.name }}</h3>
-              <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete subject {{ subj.name }} and all its chapters?');">
-                <input type="hidden" name="action" value="delete_subject">
-                <input type="hidden" name="subject_id" value="{{ subj.id }}">
-                <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger);">Delete</button>
-              </form>
-            </div>
+  <!-- Curriculum Overview Card with Bounded Height (70vh) and Internal Scrolling -->
+  <div class="card" style="display: flex; flex-direction: column; max-height: 70vh; overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="margin: 0;">Current Curriculum</h2>
+      <button type="submit" form="priorityForm" class="btn btn-primary btn-sm">💾 Save Priorities</button>
+    </div>
 
-            {% if subj.chapters %}
-              <ul style="list-style: none; display: flex; flex-direction: column; gap: 6px;">
-                {% for chap in subj.chapters %}
-                  <li style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 4px; font-size: 0.9rem;">
-                    <span>📖 {{ chap.name }} <span style="font-size: 0.75rem; color: var(--text-muted);">({{ chap.questions|length }} questions)</span></span>
-                    <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete chapter {{ chap.name }}?');">
-                      <input type="hidden" name="action" value="delete_chapter">
-                      <input type="hidden" name="chapter_id" value="{{ chap.id }}">
-                      <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;" title="Delete chapter">&times;</button>
-                    </form>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No chapters added yet for this subject.</p>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <div class="empty-state-icon">🏷️</div>
-        <h3>No subjects created yet</h3>
-        <p>Add subjects and chapters to categorize your exam questions and analyze topic-wise mistakes.</p>
-      </div>
-    {% endif %}
+    <form id="priorityForm" method="POST" action="{{ url_for('main.subjects_list') }}" style="flex: 1; overflow-y: auto; padding-right: 4px;">
+      <input type="hidden" name="action" value="update_priorities">
+
+      {% if subjects %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          {% for subj in subjects %}
+            <!-- Independent Subject Accordion Item -->
+            <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: #ffffff; overflow: hidden;">
+              <!-- Accordion Header -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #f8fafc; cursor: pointer; user-select: none;"
+                   onclick="toggleSubjectAccordion('subj_accordion_{{ subj.id }}', 'subj_arrow_{{ subj.id }}')">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span id="subj_arrow_{{ subj.id }}" style="transition: transform 0.2s ease; font-size: 0.8rem; color: var(--text-secondary);">▼</span>
+                  <h3 style="margin: 0; font-size: 1.05rem; color: var(--primary);">{{ subj.name }}</h3>
+                  <span class="badge" style="background: #e2e8f0; color: var(--text-secondary); font-size: 0.75rem;">
+                    {{ subj.sorted_chapters|length }} chapter(s)
+                  </span>
+                </div>
+
+                <div onclick="event.stopPropagation();">
+                  <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete subject {{ subj.name }} and all its chapters?');" style="display: inline;">
+                    <input type="hidden" name="action" value="delete_subject">
+                    <input type="hidden" name="subject_id" value="{{ subj.id }}">
+                    <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger); padding: 2px 8px; font-size: 0.775rem;">Delete</button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Accordion Body with Independent Chapter List Scrolling -->
+              <div id="subj_accordion_{{ subj.id }}" style="padding: 12px 16px; border-top: 1px solid var(--border-color); max-height: 260px; overflow-y: auto;">
+                {% if subj.sorted_chapters %}
+                  <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+                    {% for chap in subj.sorted_chapters %}
+                      <li style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 8px 12px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); font-size: 0.9rem;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <!-- Chapter Priority Number Input -->
+                          <input type="number" name="priority_{{ chap.id }}" value="{{ chap.priority }}" min="1" style="width: 48px; padding: 4px 6px; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; font-weight: 700; font-size: 0.85rem;" title="Edit priority/order">
+                          <span style="font-weight: 500;">📖 {{ chap.name }}</span>
+                          <span style="font-size: 0.75rem; color: var(--text-muted);">({{ chap.questions|length }} Qs)</span>
+                        </div>
+
+                        <form method="POST" action="{{ url_for('main.subjects_list') }}" onsubmit="return confirm('Delete chapter {{ chap.name }}?');" style="display: inline;">
+                          <input type="hidden" name="action" value="delete_chapter">
+                          <input type="hidden" name="chapter_id" value="{{ chap.id }}">
+                          <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Delete chapter">&times;</button>
+                        </form>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin: 8px 0;">No chapters added yet for this subject.</p>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">🏷️</div>
+          <h3>No subjects created yet</h3>
+          <p>Add subjects and chapters to organize your curriculum and assign chapter priorities.</p>
+        </div>
+      {% endif %}
+    </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleSubjectAccordion(contentId, arrowId) {
+  const content = document.getElementById(contentId);
+  const arrow = document.getElementById(arrowId);
+  if (content.style.display === "none") {
+    content.style.display = "block";
+    arrow.style.transform = "rotate(0deg)";
+  } else {
+    content.style.display = "none";
+    arrow.style.transform = "rotate(-90deg)";
+  }
+}
+</script>
 {% endblock %}

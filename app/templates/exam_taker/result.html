@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Results - {{ session.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>{{ session.name }} Results</h1>
+    <p class="subtitle">Practice Exam Analysis • Submitted on {{ session.submit_time.strftime('%d %b %Y, %H:%M') if session.submit_time else '' }}</p>
+  </div>
+  <a href="{{ url_for('exam_taker.landing') }}" class="btn btn-primary">Back to Exam Taker</a>
+</div>
+
+<!-- Score Card Header -->
+<div class="card" style="margin-bottom: 24px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div>
+      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Final Practice Score</div>
+      <div style="font-size: 3rem; font-weight: 700; color: #ffffff;">
+        {{ session.score }} <span style="font-size: 1.5rem; font-weight: 400; color: #94a3b8;">/ {{ session.total_marks }}</span>
+      </div>
+      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 4px;">
+        Scope: <strong>{{ session.scope_type }}</strong>
+      </div>
+    </div>
+
+    <div style="text-align: right;">
+      <div style="font-size: 2.8rem; font-weight: 700; color: #34d399;">
+        {{ accuracy }}%
+      </div>
+      <div style="font-size: 0.85rem; color: #94a3b8;">Accuracy</div>
+    </div>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid-cols-3" style="margin-bottom: 28px;">
+  <div class="card stat-card" style="border-top: 4px solid var(--success);">
+    <span class="stat-label">Correct Questions</span>
+    <span class="stat-value" style="color: var(--success);">{{ correct_cnt }}</span>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--danger);">
+    <span class="stat-label">Wrong Questions</span>
+    <span class="stat-value" style="color: var(--danger);">{{ wrong_cnt }}</span>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--warning);">
+    <span class="stat-label">Unattempted</span>
+    <span class="stat-value" style="color: var(--warning);">{{ unattempted_cnt }}</span>
+  </div>
+</div>
+
+<!-- Questions Review Breakdown -->
+<div class="card">
+  <h2>Question Breakdown & Solutions</h2>
+  <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+    {% for r in responses %}
+      {% set q = r.question %}
+      <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 16px; background: {% if r.is_correct == False %}#fef2f2{% else %}#ffffff{% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-weight: 700;">Q{{ loop.index }}.</span>
+            <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+              {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else '' }}
+            </span>
+            {% if r.is_correct == True %}
+              <span class="badge badge-state-mastered">✓ Correct (+4.0)</span>
+            {% elif r.is_correct == False %}
+              <span class="badge badge-state-wrong">✖ Wrong (-1.0)</span>
+            {% else %}
+              <span class="badge badge-state-new">○ Unattempted (0.0)</span>
+            {% endif %}
+          </div>
+
+          <a href="{{ url_for('questions.detail', question_id=q.id) }}" class="btn btn-secondary btn-sm">Inspect Full History &rarr;</a>
+        </div>
+
+        <div class="render-math" style="font-size: 0.95rem; margin-bottom: 8px;">
+          {{ q.question_text if q.question_text else '[Image Based Question]' }}
+        </div>
+
+        {% if q.image_path %}
+          <div style="margin-bottom: 8px;">
+            <img src="{{ url_for('static', filename=q.image_path) }}" alt="Question screenshot" style="max-height: 120px; border-radius: 4px;">
+          </div>
+        {% endif %}
+
+        <div style="display: flex; gap: 20px; font-size: 0.875rem; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 4px; margin-top: 8px;">
+          <span>Your Answer: <strong>{{ r.user_answer if r.user_answer else 'Unattempted' }}</strong></span>
+          <span>Correct Answer: <strong style="color: var(--success);">{{ q.correct_answer }}</strong></span>
+        </div>
+
+        {% if q.solution %}
+          <div style="margin-top: 10px; font-size: 0.875rem; color: var(--text-secondary);" class="render-math solution-text">
+            <strong>Solution:</strong> {{ q.solution }}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

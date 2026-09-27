@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models import db, Exam, Question, Attempt, Subject, Chapter, Tag, Option
-from app.utils import save_uploaded_image, parse_optional_int, parse_optional_float
+from app.utils import save_uploaded_image, parse_optional_int, parse_optional_float, sort_subjects, sort_chapters
 from datetime import datetime
 
 exams_bp = Blueprint('exams', __name__)
@@ -68,8 +68,15 @@ def workspace(exam_id):
     current_attempt = attempts[q_index - 1] if 0 < q_index <= len(attempts) else None
     current_question = current_attempt.question if current_attempt else None
 
-    subjects = Subject.query.order_by(Subject.name).all()
-    chapters = Chapter.query.order_by(Chapter.name).all()
+    subjects = sort_subjects(Subject.query.all())
+    subjects_data = []
+    for s in subjects:
+        subjects_data.append({
+            'id': s.id,
+            'name': s.name,
+            'sorted_chapters': [{'id': c.id, 'name': c.name} for c in sort_chapters(s.chapters)]
+        })
+
     all_tags = Tag.query.order_by(Tag.name).all()
 
     return render_template(
@@ -81,7 +88,7 @@ def workspace(exam_id):
         current_question=current_question,
         q_index=q_index,
         subjects=subjects,
-        chapters=chapters,
+        subjects_data=subjects_data,
         all_tags=all_tags,
         mistake_types=Attempt.MISTAKE_TYPES
     )

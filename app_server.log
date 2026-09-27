@@ -8,106 +8,153 @@
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 631-326-424
-127.0.0.1 - - [31/Aug/2026 14:57:38] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:57:38] "GET /static/js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:57:38] "GET /static/css/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:57:39] "[33mGET /exams/1/workspace HTTP/1.1[0m" 404 -
+127.0.0.1 - - [27/Sep/2026 17:29:39] "GET / HTTP/1.1" 200 -
  * Detected change in '/app/tests/verify_frontend.py', reloading
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 631-326-424
-127.0.0.1 - - [31/Aug/2026 14:58:56] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:58:56] "GET /static/css/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:58:56] "GET /static/js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:58:56] "GET /exams/ HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 14:58:56] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 14:58:56] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 14:59:45] "GET /exams/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:04] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:04] "GET /static/js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:04] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "GET /subjects HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "[35m[1mGET /questions/new HTTP/1.1[0m" 500 -
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/routes/questions.py", line 145, in create_question
+    return render_template('questions/form.html', active_page='question_bank', subjects=subjects, subjects_data=subjects_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/app/app/templates/questions/form.html", line 117, in template
+    {% endblock %}
+jinja2.exceptions.TemplateSyntaxError: Unexpected end of template. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+127.0.0.1 - - [27/Sep/2026 17:30:05] "GET /questions/new?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "GET /questions/new?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:30:05] "GET /questions/new?__debugger__=yes&cmd=resource&f=console.png&s=ihg5ATrrDDtSyAqvxi9K HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:00] "[35m[1mGET /questions/new HTTP/1.1[0m" 500 -
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/routes/questions.py", line 145, in create_question
+    return render_template('questions/form.html', active_page='question_bank', subjects=subjects, subjects_data=subjects_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/app/app/templates/questions/form.html", line 117, in template
+    {% endblock %}
+jinja2.exceptions.TemplateSyntaxError: Unexpected end of template. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+127.0.0.1 - - [27/Sep/2026 17:31:41] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:41] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:41] "GET /static/js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:42] "GET /subjects HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:42] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:42] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:43] "GET /questions/new HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:43] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:43] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "GET /exam-taker/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "GET /exam-taker/setup HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:44] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:45] "GET /questions/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:45] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:45] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:46] "GET /analytics/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:31:46] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:31:46] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
  * Detected change in '/app/tests/verify_frontend.py', reloading
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 631-326-424
-127.0.0.1 - - [31/Aug/2026 15:00:08] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:08] "GET /static/css/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:08] "GET /static/js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "GET /exams/ HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "GET /exams/2/workspace?q_index=1 HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "GET /questions/ HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:09] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "GET /questions/3 HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "GET /review/ HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "GET /review/session/3 HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "GET /analytics/ HTTP/1.1" 200 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [31/Aug/2026 15:00:10] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
- * Detected change in '/app/app/models.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/__init__.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/utils.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/routes/exams.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/routes/review.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/routes/exams.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/routes/questions.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/app/seed.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
- * Detected change in '/app/tests/test_app.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 631-326-424
-127.0.0.1 - - [01/Sep/2026 17:14:38] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:38] "GET /static/css/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:38] "GET /static/js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "GET /exams/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "GET /exams/2/workspace?q_index=1 HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:39] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "GET /questions/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "GET /questions/2 HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "GET /review/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:40] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "GET /review/session/1 HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "GET /analytics/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [01/Sep/2026 17:14:41] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:44] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:44] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:44] "GET /static/js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "GET /subjects HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "GET /questions/new HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:45] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "GET /exam-taker/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "GET /exam-taker/setup HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:46] "GET /questions/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:47] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:47] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:47] "GET /analytics/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Sep/2026 17:32:47] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Sep/2026 17:32:47] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -

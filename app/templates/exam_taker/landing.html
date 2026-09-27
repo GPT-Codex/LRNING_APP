@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Taker - Mistake Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+  <div>
+    <h1>⚡ Exam Taker Generator</h1>
+    <p class="subtitle">Generate and attempt live timed practice tests compiled dynamically from your Question Bank.</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <a href="{{ url_for('exam_taker.templates') }}" class="btn btn-secondary">📐 Manage Templates</a>
+    <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-primary">▶ Start New Exam Wizard</a>
+  </div>
+</div>
+
+<div class="grid-cols-2" style="margin-bottom: 32px;">
+  <!-- Templates Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Available Templates</h2>
+      <a href="{{ url_for('exam_taker.templates') }}" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Manage &rarr;</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      {% for tmpl in templates %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+              {{ tmpl.name }}
+              {% if tmpl.is_default %}<span class="badge badge-state-mastered">Built-in Default</span>{% endif %}
+            </div>
+            <div style="font-size: 0.825rem; color: var(--text-secondary); margin-top: 2px;">
+              ⏱️ {{ tmpl.duration_minutes }} mins • ❓ {{ tmpl.total_questions }} Questions
+            </div>
+          </div>
+          <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-primary btn-sm">Configure &rarr;</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent Practice Sessions Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Recent Practice Sessions</h2>
+    </div>
+
+    {% if past_sessions %}
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for sess in past_sessions %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #ffffff; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 700; color: var(--text-primary);">{{ sess.name }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                Scope: {{ sess.scope_type }} • {{ sess.created_at.strftime('%d %b %Y, %H:%M') if sess.created_at else '' }}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">
+                {{ sess.score }} / {{ sess.total_marks }}
+              </div>
+              <a href="{{ url_for('exam_taker.session_result', session_id=sess.id) }}" class="btn btn-secondary btn-sm" style="margin-top: 4px;">Results &rarr;</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 30px 16px;">
+        <div class="empty-state-icon">⚡</div>
+        <h3>No practice sessions taken yet</h3>
+        <p>Start your first live generated test to test your speed and accuracy.</p>
+        <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-primary btn-sm">Start Practice Exam</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
