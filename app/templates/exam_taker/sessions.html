@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Past Exam Sessions - Exam Taker{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+  <div>
+    <h1>In-App Past Exam Sessions</h1>
+    <p class="subtitle">History and performance results for examinations taken inside the application.</p>
+  </div>
+  <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-primary">⚡ Start New Exam</a>
+</div>
+
+<div class="card">
+  {% if sessions %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Session Name</th>
+            <th>Scope</th>
+            <th>Questions</th>
+            <th>Duration</th>
+            <th>Status</th>
+            <th>Score</th>
+            <th>Date Taken</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+            <tr>
+              <td><strong>{{ s.name }}</strong></td>
+              <td><span class="badge" style="background: #f1f5f9; color: var(--text-primary);">{{ s.scope_type }}</span></td>
+              <td>{{ s.total_questions }} Qs</td>
+              <td>{{ s.duration_minutes }} min</td>
+              <td>
+                {% if s.status == 'Submitted' %}
+                  <span class="badge badge-success">Submitted</span>
+                {% elif s.status == 'Active' %}
+                  <span class="badge badge-warning">In Progress</span>
+                {% else %}
+                  <span class="badge badge-secondary">{{ s.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.status == 'Submitted' %}
+                  <strong>{{ s.score }} / {{ s.total_marks }}</strong>
+                {% else %}
+                  &mdash;
+                {% endif %}
+              </td>
+              <td>{{ s.created_at.strftime('%b %d, %Y %H:%M') if s.created_at else '' }}</td>
+              <td>
+                {% if s.status == 'Submitted' %}
+                  <a href="{{ url_for('exam_taker.session_result', session_id=s.id) }}" class="btn btn-secondary btn-sm">View Result</a>
+                {% elif s.status == 'Active' %}
+                  <a href="{{ url_for('exam_taker.session', session_id=s.id) }}" class="btn btn-primary btn-sm">Resume Exam</a>
+                {% else %}
+                  <a href="{{ url_for('exam_taker.preview', session_id=s.id) }}" class="btn btn-secondary btn-sm">Preview</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">⚡</div>
+      <h3>No in-app exam sessions found</h3>
+      <p>Generate and take a practice exam using the Exam Taker engine.</p>
+      <a href="{{ url_for('exam_taker.setup') }}" class="btn btn-primary">Start New Exam</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

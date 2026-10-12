@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Taken Exam Review - Response #{{ resp.id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
+          {{ question.chapter.subject.name if question.chapter and question.chapter.subject else '' }} &rarr; {{ question.chapter.name if question.chapter else '' }}
+        </span>
+        <span class="badge badge-state-{{ resp.review_state|lower }}">Current State: {{ resp.review_state }}</span>
+        <span class="badge" style="background: #e2e8f0; color: #334155;">{{ question.question_type }}</span>
+      </div>
+      <h1>Taken Exam Review Practice</h1>
+    </div>
+    <a href="{{ url_for('exam_taker.review_queue') }}" class="btn btn-secondary btn-sm">&larr; Exit Queue</a>
+  </div>
+
+  <div class="card">
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+      Question Statement
+    </div>
+
+    <div class="render-math" style="font-size: 1.15rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 20px;">
+      {{ question.question_text if question.question_text else 'Inspect image below:' }}
+    </div>
+
+    {% if question.image_path %}
+      <div style="margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename=question.image_path) }}" alt="Question image" style="max-width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+      </div>
+    {% endif %}
+
+    {% if not submitted %}
+      <!-- Interactive Answering Form (Answer-First) -->
+      <form method="POST" action="{{ url_for('exam_taker.review_session', response_id=resp.id) }}">
+        {% if question.question_type == 'MCQ' or question.question_type == 'Single Correct' %}
+          <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Select One Correct Option:</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              {% for opt in question.options %}
+                <label style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.95rem; background: #ffffff; padding: 12px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); cursor: pointer;">
+                  <input type="radio" name="user_answer" value="{{ opt.label }}" style="margin-top: 3px;" required>
+                  <div style="flex: 1;">
+                    <strong style="margin-right: 6px;">{{ opt.label }}.</strong>
+                    {% if opt.text %}<span class="render-math">{{ opt.text }}</span>{% endif %}
+                    {% if opt.image_path %}
+                      <div style="margin-top: 6px;">
+                        <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option image" style="max-height: 120px; max-width: 100%; object-fit: contain;">
+                      </div>
+                    {% endif %}
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% elif question.question_type == 'Multiple Select' %}
+          <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Select All Correct Options (Multiple Correct):</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              {% for opt in question.options %}
+                <label style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.95rem; background: #ffffff; padding: 12px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); cursor: pointer;">
+                  <input type="checkbox" name="user_answer_multi" value="{{ opt.label }}" style="margin-top: 3px;">
+                  <div style="flex: 1;">
+                    <strong style="margin-right: 6px;">{{ opt.label }}.</strong>
+                    {% if opt.text %}<span class="render-math">{{ opt.text }}</span>{% endif %}
+                    {% if opt.image_path %}
+                      <div style="margin-top: 6px;">
+                        <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option image" style="max-height: 120px; max-width: 100%; object-fit: contain;">
+                      </div>
+                    {% endif %}
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% elif question.question_type == 'Numerical' %}
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Your Numerical Answer:</label>
+            <input type="text" name="user_answer" class="form-control" placeholder="e.g. 25.5" required style="font-size: 1.1rem; padding: 12px;">
+          </div>
+
+        {% else %}
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Your Response / Reasoning:</label>
+            <textarea name="user_answer" class="form-control" rows="4" placeholder="Type your answer or reasoning..." required></textarea>
+          </div>
+        {% endif %}
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <a href="{{ url_for('exam_taker.review_queue') }}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">Submit Answer & Verify Solution &rarr;</button>
+        </div>
+      </form>
+
+    {% else %}
+      <!-- Feedback & Solution Reveal View -->
+      <div style="background: {% if is_correct %}#f0fdf4{% else %}#fef2f2{% endif %}; border: 1px solid {% if is_correct %}#bbf7d0{% else %}#fecaca{% endif %}; padding: 16px 20px; border-radius: var(--border-radius-sm); margin-bottom: 24px;">
+        <h3 style="color: {% if is_correct %}var(--success){% else %}var(--danger){% endif %}; margin-bottom: 6px;">
+          {% if is_correct %}
+            ✅ Correct Answer!
+          {% else %}
+            ❌ Incorrect Answer
+          {% endif %}
+        </h3>
+        <p style="margin: 0; font-size: 0.95rem;">
+          New review status for this in-app response: <strong>{{ resp.review_state }}</strong>
+        </p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <div style="margin-bottom: 12px;">
+          <strong>Your Practice Submission:</strong>
+          <span style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">{{ submitted_answer if submitted_answer else '(Blank)' }}</span>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <strong>Correct Answer:</strong>
+          <span style="font-family: monospace; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px;">
+            {% if question.question_type == 'Multiple Select' %}
+              {{ question.options|selectattr('is_correct')|map(attribute='label')|list|join(', ') }}
+            {% else %}
+              {{ question.correct_answer if question.correct_answer else 'Refer to solution' }}
+            {% endif %}
+          </span>
+        </div>
+        {% if resp.user_answer %}
+          <div>
+            <strong>Original Exam Response:</strong>
+            <span style="font-family: monospace; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">{{ resp.user_answer }}</span>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if question.solution %}
+        <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--success);">
+          <h3>Official Solution & Explanation:</h3>
+          <div class="render-math solution-text" style="margin-top: 10px; line-height: 1.6;">{{ question.solution }}</div>
+        </div>
+      {% endif %}
+
+      <!-- Recall Notes Field for In-App Response -->
+      <div class="card" style="margin-bottom: 20px; background: #fafafa;">
+        <h3 style="margin-bottom: 8px;">🧠 Recall Notes for this Question</h3>
+        <p class="subtitle" style="margin-bottom: 12px;">Record what you remembered, formulas used, or why you skipped this question originally.</p>
+        <form method="POST" action="{{ url_for('exam_taker.save_recall', session_id=resp.session_id) }}">
+          <input type="hidden" name="response_id" value="{{ resp.id }}">
+          <textarea name="recall_notes" class="form-control" rows="3" placeholder="What do you remember about this question? Why did you leave it unanswered or make a mistake?">{{ resp.recall_notes or '' }}</textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+            <button type="submit" class="btn btn-secondary btn-sm">💾 Save Recall Notes</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+        <a href="{{ url_for('exam_taker.review_queue') }}" class="btn btn-secondary">&larr; Return to Taken Exam Queue</a>
+        <div style="display: flex; gap: 10px;">
+          <a href="{{ url_for('exam_taker.review_session', response_id=resp.id) }}" class="btn btn-secondary">🔄 Try Again</a>
+          {% if next_resp %}
+            <a href="{{ url_for('exam_taker.review_session', response_id=next_resp.id) }}" class="btn btn-primary">Next Question &rarr;</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

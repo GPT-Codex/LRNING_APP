@@ -2,9 +2,9 @@ import json
 import random
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app.models import db, Subject, Chapter, Question, Attempt, ExamTemplate, ExamSession, ExamSessionResponse
+from app.models import db, Subject, Chapter, Question, Attempt, ExamTemplate, ExamSession, ExamSessionResponse, ExamSessionReviewAttempt
 from app.services.exam_generator import validate_and_generate_exam
-from app.utils import sort_subjects, sort_chapters, parse_optional_int
+from app.utils import sort_subjects, sort_chapters, parse_optional_int, evaluate_answer
 
 exam_taker_bp = Blueprint('exam_taker', __name__)
 
@@ -22,13 +22,16 @@ def setup():
         difficulty_mode = request.form.get('difficulty_mode', 'Medium')
         duration_minutes = int(request.form.get('duration_minutes') or 60)
         total_questions = int(request.form.get('total_questions') or 30)
+        ordering_mode = request.form.get('ordering_mode', 'Randomized')
+        ranges_json_str = request.form.get('ranges_json')
+        ranges = json.loads(ranges_json_str) if ranges_json_str and ordering_mode == 'Structured' else None
 
         # Parse selected subjects & chapters
         selected_subject_ids = [int(sid) for sid in request.form.getlist('selected_subjects') if sid.isdigit()]
         selected_chapter_ids = [int(cid) for sid, cids in request.form.items() if sid.startswith('selected_chapters_') for cid in request.form.getlist(sid) if cid.isdigit()]
 
         tmpl = ExamTemplate.query.get(template_id) if template_id else ExamTemplate.query.filter_by(is_default=True).first()
-        pattern_sections = json.loads(tmpl.pattern_json) if tmpl else [
+        pattern_sections = json.loads(tmpl.pattern_json) if tmpl and tmpl.pattern_json else [
             {"name": "Section A: Single Correct MCQ", "type": "MCQ", "start": 1, "end": 20, "count": 20},
             {"name": "Section B: Numerical Answer", "type": "Numerical", "start": 21, "end": 25, "count": 5},
             {"name": "Section C: Multiple Correct MCQ", "type": "Multiple Select", "start": 26, "end": 30, "count": 5}
@@ -41,19 +44,28 @@ def setup():
             selected_chapter_ids=selected_chapter_ids,
             difficulty_mode=difficulty_mode,
             pattern_sections=pattern_sections,
-            total_questions=total_questions
+            total_questions=total_questions,
+            ordering_mode=ordering_mode,
+            ranges=ranges
         )
 
         if not success:
             flash(err_details.get('message', 'Not enough eligible questions in selected scope.'), 'error')
             subjects = sort_subjects(Subject.query.all())
+            subjects_data = []
             for s in subjects:
                 s.sorted_chapters = sort_chapters(s.chapters)
+                subjects_data.append({
+                    'id': s.id,
+                    'name': s.name,
+                    'sorted_chapters': [{'id': c.id, 'name': c.name} for c in s.sorted_chapters]
+                })
             templates = ExamTemplate.query.all()
             return render_template(
                 'exam_taker/setup.html',
-                active_page='exam_taker',
+                active_page='exam_taker_setup',
                 subjects=subjects,
+                subjects_data=subjects_data,
                 templates=templates,
                 scope_type=scope_type,
                 difficulty_mode=difficulty_mode,
@@ -63,10 +75,12 @@ def setup():
         # Create session in 'Created' state ready for preview
         session = ExamSession(
             template_id=tmpl.id if tmpl else None,
-            name=f"{scope_type} Practice Exam",
+            name=f"{'Structured' if ordering_mode == 'Structured' else scope_type} Practice Exam",
             duration_minutes=duration_minutes,
             total_questions=total_questions,
             scope_type=scope_type,
+            ordering_mode=ordering_mode,
+            ranges_json=ranges_json_str if ordering_mode == 'Structured' else None,
             selected_subjects_json=json.dumps(selected_subject_ids),
             selected_chapters_json=json.dumps(selected_chapter_ids),
             difficulty_mode=difficulty_mode,
@@ -80,10 +94,16 @@ def setup():
         return redirect(url_for('exam_taker.preview', session_id=session.id))
 
     subjects = sort_subjects(Subject.query.all())
+    subjects_data = []
     for s in subjects:
         s.sorted_chapters = sort_chapters(s.chapters)
+        subjects_data.append({
+            'id': s.id,
+            'name': s.name,
+            'sorted_chapters': [{'id': c.id, 'name': c.name} for c in s.sorted_chapters]
+        })
     templates = ExamTemplate.query.all()
-    return render_template('exam_taker/setup.html', active_page='exam_taker', subjects=subjects, templates=templates)
+    return render_template('exam_taker/setup.html', active_page='exam_taker_setup', subjects=subjects, subjects_data=subjects_data, templates=templates)
 
 @exam_taker_bp.route('/preview/<int:session_id>')
 def preview(session_id):
@@ -91,13 +111,15 @@ def preview(session_id):
     q_ids = json.loads(session.questions_json) if session.questions_json else []
     questions = [Question.query.get(qid) for qid in q_ids if Question.query.get(qid)]
 
+    ranges = json.loads(session.ranges_json) if session.ranges_json else None
+
     # Breakdown by subject and chapter
     subject_counts = {}
     for q in questions:
         sname = q.chapter.subject.name if q.chapter and q.chapter.subject else "General"
         subject_counts[sname] = subject_counts.get(sname, 0) + 1
 
-    return render_template('exam_taker/preview.html', active_page='exam_taker', session=session, subject_counts=subject_counts)
+    return render_template('exam_taker/preview.html', active_page='exam_taker', session=session, subject_counts=subject_counts, ranges=ranges)
 
 @exam_taker_bp.route('/start/<int:session_id>', methods=['POST'])
 def start_exam(session_id):
@@ -148,13 +170,122 @@ def session(session_id):
         remaining_seconds=remaining_seconds
     )
 
+@exam_taker_bp.route('/sessions')
+def past_sessions():
+    sessions = ExamSession.query.order_by(ExamSession.created_at.desc()).all()
+    return render_template('exam_taker/sessions.html', active_page='exam_taker_sessions', sessions=sessions)
+
+@exam_taker_bp.route('/review')
+def review_queue():
+    state_filter = request.args.get('state')
+    query = ExamSessionResponse.query.join(ExamSession).filter(ExamSession.status == 'Submitted')
+    if state_filter:
+        query = query.filter(ExamSessionResponse.review_state == state_filter)
+    else:
+        query = query.filter(ExamSessionResponse.review_state.in_(['Wrong', 'Learning', 'Reviewing']))
+
+    due_responses = query.order_by(ExamSessionResponse.created_at.desc()).all()
+
+    wrong_count = ExamSessionResponse.query.join(ExamSession).filter(ExamSession.status == 'Submitted', ExamSessionResponse.review_state == 'Wrong').count()
+    learning_count = ExamSessionResponse.query.join(ExamSession).filter(ExamSession.status == 'Submitted', ExamSessionResponse.review_state == 'Learning').count()
+    reviewing_count = ExamSessionResponse.query.join(ExamSession).filter(ExamSession.status == 'Submitted', ExamSessionResponse.review_state == 'Reviewing').count()
+    mastered_count = ExamSessionResponse.query.join(ExamSession).filter(ExamSession.status == 'Submitted', ExamSessionResponse.review_state == 'Mastered').count()
+
+    return render_template(
+        'exam_taker/review_queue.html',
+        active_page='exam_taker_review',
+        due_responses=due_responses,
+        wrong_count=wrong_count,
+        learning_count=learning_count,
+        reviewing_count=reviewing_count,
+        mastered_count=mastered_count,
+        current_filter=state_filter
+    )
+
+@exam_taker_bp.route('/review/<int:response_id>', methods=['GET', 'POST'])
+def review_session(response_id):
+    resp = ExamSessionResponse.query.get_or_404(response_id)
+    question = resp.question
+
+    if request.method == 'POST':
+        user_answer = request.form.get('user_answer', '').strip()
+
+        # Check for multiple select checkboxes array
+        user_answers_list = request.form.getlist('user_answer_multi')
+        if user_answers_list:
+            user_answer = json.dumps(sorted(user_answers_list))
+
+        is_correct = evaluate_answer(question, user_answer)
+        time_taken = parse_optional_int(request.form.get('time_taken_seconds'))
+
+        rev_att = ExamSessionReviewAttempt(
+            response_id=resp.id,
+            user_answer=user_answer,
+            is_correct=is_correct,
+            time_taken_seconds=time_taken
+        )
+        db.session.add(rev_att)
+
+        if is_correct:
+            if resp.review_state in ['Wrong', 'New']:
+                resp.review_state = 'Learning'
+            elif resp.review_state == 'Learning':
+                resp.review_state = 'Reviewing'
+            elif resp.review_state == 'Reviewing':
+                resp.review_state = 'Mastered'
+        else:
+            resp.review_state = 'Wrong'
+
+        db.session.commit()
+
+        next_resp = ExamSessionResponse.query.join(ExamSession).filter(
+            ExamSession.status == 'Submitted',
+            ExamSessionResponse.review_state.in_(['Wrong', 'Learning', 'Reviewing']),
+            ExamSessionResponse.id != resp.id
+        ).first()
+
+        return render_template(
+            'exam_taker/review_session.html',
+            active_page='exam_taker_review',
+            resp=resp,
+            question=question,
+            is_correct=is_correct,
+            submitted_answer=user_answer,
+            submitted=True,
+            next_resp=next_resp
+        )
+
+    return render_template(
+        'exam_taker/review_session.html',
+        active_page='exam_taker_review',
+        resp=resp,
+        question=question,
+        submitted=False
+    )
+
+@exam_taker_bp.route('/session/<int:session_id>/recall/save', methods=['POST'])
+def save_recall(session_id):
+    resp_id = request.form.get('response_id', type=int)
+    recall_text = request.form.get('recall_notes', '').strip()
+    resp = ExamSessionResponse.query.filter_by(id=resp_id, session_id=session_id).first_or_404()
+    resp.recall_notes = recall_text
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify({'status': 'success', 'recall_notes': recall_text})
+    flash('Recall notes saved successfully.', 'success')
+    return redirect(url_for('exam_taker.session_result', session_id=session_id))
+
 @exam_taker_bp.route('/session/<int:session_id>/answer', methods=['POST'])
 def save_answer(session_id):
     session = ExamSession.query.get_or_404(session_id)
     question_id = request.form.get('question_id', type=int)
     q_index = request.form.get('q_index', type=int)
     nav_action = request.form.get('nav_action', 'next')
+
     user_answer = request.form.get('user_answer', '').strip()
+    user_answers_list = request.form.getlist('user_answer_multi')
+    if user_answers_list:
+        user_answer = json.dumps(sorted(user_answers_list))
 
     resp = ExamSessionResponse.query.filter_by(session_id=session.id, question_id=question_id).first()
     if resp:
@@ -181,28 +312,16 @@ def submit_exam(session_id):
 
         for r in responses:
             q = r.question
-            if not r.user_answer:
+            if not r.user_answer or not r.user_answer.strip():
                 r.is_correct = None
                 r.marks_awarded = 0.0
+                r.review_state = 'New'
             else:
-                # Basic string comparison matching answer
-                is_correct = (r.user_answer.strip().lower() == (q.correct_answer or '').strip().lower())
+                is_correct = evaluate_answer(q, r.user_answer)
                 r.is_correct = is_correct
                 r.marks_awarded = 4.0 if is_correct else -1.0
                 total_score += r.marks_awarded
-
-                # Automatically record attempt in history for review queue integration
-                att = Attempt(
-                    question_id=q.id,
-                    attempt_type='EXAM',
-                    user_answer=r.user_answer,
-                    is_correct=is_correct,
-                    marks_awarded=r.marks_awarded,
-                    max_marks=4.0,
-                    time_taken_seconds=None
-                )
-                db.session.add(att)
-                q.review_state = 'Mastered' if is_correct else 'Wrong'
+                r.review_state = 'Mastered' if is_correct else 'Wrong'
 
         session.score = total_score
         session.total_marks = total_max
@@ -241,6 +360,8 @@ def templates():
             name = request.form.get('name', '').strip()
             duration = int(request.form.get('duration_minutes') or 60)
             questions_cnt = int(request.form.get('total_questions') or 30)
+            ordering_mode = request.form.get('ordering_mode', 'Randomized')
+            ranges_json_str = request.form.get('ranges_json')
 
             pattern = [
                 {"name": "Section A: Single Correct MCQ", "type": "MCQ", "start": 1, "end": 20, "count": 20},
@@ -257,6 +378,8 @@ def templates():
                 name=name,
                 duration_minutes=duration,
                 total_questions=questions_cnt,
+                ordering_mode=ordering_mode,
+                ranges_json=ranges_json_str if ordering_mode == 'Structured' else None,
                 pattern_json=json.dumps(pattern),
                 difficulty_json=json.dumps(diff),
                 is_default=False
@@ -273,5 +396,15 @@ def templates():
                 flash('Template deleted.', 'success')
         return redirect(url_for('exam_taker.templates'))
 
+    subjects = sort_subjects(Subject.query.all())
+    subjects_data = []
+    for s in subjects:
+        s.sorted_chapters = sort_chapters(s.chapters)
+        subjects_data.append({
+            'id': s.id,
+            'name': s.name,
+            'sorted_chapters': [{'id': c.id, 'name': c.name} for c in s.sorted_chapters]
+        })
+
     all_templates = ExamTemplate.query.order_by(ExamTemplate.is_default.desc(), ExamTemplate.created_at.desc()).all()
-    return render_template('exam_taker/templates.html', active_page='exam_taker', templates=all_templates)
+    return render_template('exam_taker/templates.html', active_page='exam_taker', templates=all_templates, subjects_data=subjects_data)

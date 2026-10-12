@@ -38,9 +38,11 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_global_data():
-        # Inject due review count into base templates for badge count in sidebar
-        due_review_count = Question.query.filter(Question.review_state.in_(['Wrong', 'Learning', 'Reviewing'])).count()
-        return dict(due_review_count=due_review_count)
+        # Inject due review counts into base templates for sidebar badges
+        from app.models import Attempt, ExamSessionResponse
+        due_review_count = Attempt.query.filter(Attempt.exam_id.isnot(None), Attempt.review_state.in_(['Wrong', 'Learning', 'Reviewing'])).count()
+        due_taken_review_count = ExamSessionResponse.query.filter(ExamSessionResponse.review_state.in_(['Wrong', 'Learning', 'Reviewing'])).count()
+        return dict(due_review_count=due_review_count, due_taken_review_count=due_taken_review_count)
 
     # CLI command for database seeding
     @app.cli.command("seed-db")
@@ -66,6 +68,50 @@ def create_app(config_class=Config):
             if 'priority' not in columns:
                 with db.engine.connect() as conn:
                     conn.execute(text("ALTER TABLE chapter ADD COLUMN priority INTEGER NOT NULL DEFAULT 1"))
+                    conn.commit()
+
+        if 'exam_template' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('exam_template')]
+            if 'ordering_mode' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_template ADD COLUMN ordering_mode VARCHAR(30) NOT NULL DEFAULT 'Randomized'"))
+                    conn.commit()
+            if 'ranges_json' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_template ADD COLUMN ranges_json TEXT"))
+                    conn.commit()
+
+        if 'exam_session' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('exam_session')]
+            if 'ordering_mode' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_session ADD COLUMN ordering_mode VARCHAR(30) NOT NULL DEFAULT 'Randomized'"))
+                    conn.commit()
+            if 'ranges_json' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_session ADD COLUMN ranges_json TEXT"))
+                    conn.commit()
+
+        if 'attempt' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('attempt')]
+            if 'recall_notes' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE attempt ADD COLUMN recall_notes TEXT"))
+                    conn.commit()
+            if 'review_state' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE attempt ADD COLUMN review_state VARCHAR(30) NOT NULL DEFAULT 'New'"))
+                    conn.commit()
+
+        if 'exam_session_response' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('exam_session_response')]
+            if 'recall_notes' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_session_response ADD COLUMN recall_notes TEXT"))
+                    conn.commit()
+            if 'review_state' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE exam_session_response ADD COLUMN review_state VARCHAR(30) NOT NULL DEFAULT 'New'"))
                     conn.commit()
 
         # Seed Default Exam Template if missing

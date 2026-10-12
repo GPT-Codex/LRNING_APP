@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Active Recall Review - Question #{{ question.id }}{% endblock %}
+{% block title %}Logged Exam Review - Question #{{ question.id }}{% endblock %}
 
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto;">
@@ -10,15 +10,15 @@
         <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
           {{ question.chapter.subject.name if question.chapter and question.chapter.subject else '' }} &rarr; {{ question.chapter.name if question.chapter else '' }}
         </span>
-        <span class="badge badge-state-{{ question.review_state|lower }}">Current State: {{ question.review_state }}</span>
+        <span class="badge badge-state-{{ target_att.review_state|lower }}">Current State: {{ target_att.review_state }}</span>
+        <span class="badge" style="background: #e2e8f0; color: #334155;">{{ question.question_type }}</span>
       </div>
-      <h1>Active Recall Practice</h1>
+      <h1>Logged Exam Active Recall Review</h1>
     </div>
     <a href="{{ url_for('review.queue') }}" class="btn btn-secondary btn-sm">&larr; Exit Queue</a>
   </div>
 
-  <!-- Focused Review Card -->
-  <div class="review-card">
+  <div class="card">
     <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
       Question Statement
     </div>
@@ -33,82 +33,68 @@
       </div>
     {% endif %}
 
-    {% if question.options %}
-      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
-        <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Options:</h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          {% for opt in question.options %}
-            <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; background: #ffffff; padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-              <span style="font-weight: 700; min-width: 24px;">{{ opt.label }}.</span>
-              <div style="flex: 1;">
-                {% if opt.text %}
-                  <div class="render-math" style="margin-bottom: 4px;">{{ opt.text }}</div>
-                {% endif %}
-                {% if opt.image_path %}
-                  <div>
-                    <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option {{ opt.label }} image" style="max-height: 160px; max-width: 100%; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color);" onclick="window.open(this.src)" title="Click to view image" cursor="pointer">
+    {% if not submitted %}
+      <!-- Interactive Answering Form (Answer-First) -->
+      <form method="POST" action="{{ url_for('review.session', attempt_id=target_att.id) }}">
+        {% if question.question_type == 'MCQ' or question.question_type == 'Single Correct' %}
+          <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Select One Correct Option:</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              {% for opt in question.options %}
+                <label style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.95rem; background: #ffffff; padding: 12px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); cursor: pointer;">
+                  <input type="radio" name="user_answer" value="{{ opt.label }}" style="margin-top: 3px;" required>
+                  <div style="flex: 1;">
+                    <strong style="margin-right: 6px;">{{ opt.label }}.</strong>
+                    {% if opt.text %}<span class="render-math">{{ opt.text }}</span>{% endif %}
+                    {% if opt.image_path %}
+                      <div style="margin-top: 6px;">
+                        <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option image" style="max-height: 120px; max-width: 100%; object-fit: contain;">
+                      </div>
+                    {% endif %}
                   </div>
-                {% endif %}
-              </div>
+                </label>
+              {% endfor %}
             </div>
-          {% endfor %}
-        </div>
-      </div>
-    {% endif %}
-
-    <!-- Reveal Toggle Action -->
-    <div style="text-align: center; margin: 28px 0;" id="revealActionContainer">
-      <button type="button" id="revealAnswerBtn" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">
-        👁️ Reveal Answer, Solution & Past Mistake
-      </button>
-    </div>
-
-    <!-- Hidden Answer & Solution Box until Clicked -->
-    <div id="solutionRevealBox" class="reveal-box" style="display: none;">
-      <h3 style="color: var(--success); margin-bottom: 8px;">Correct Answer: {{ question.correct_answer if question.correct_answer else 'See solution' }}</h3>
-
-      {% if question.solution %}
-        <div style="margin-bottom: 16px;" class="render-math">
-          <strong>Solution & Explanation:</strong>
-          <div class="solution-text" style="margin-top: 6px; font-size: 0.95rem;">{{ question.solution }}</div>
-        </div>
-      {% endif %}
-
-      {% if latest_att and latest_att.mistake_reason %}
-        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px 16px; border-radius: var(--border-radius-sm); margin-bottom: 20px;">
-          <div style="font-weight: 700; color: #991b1b; font-size: 0.875rem;">Your Previous Mistake ({{ latest_att.mistake_type }}):</div>
-          <div style="color: #b91c1c; font-size: 0.875rem; margin-top: 2px;">{{ latest_att.mistake_reason }}</div>
-        </div>
-      {% endif %}
-
-      <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 20px 0;">
-
-      <!-- Submission Form for Review Attempt -->
-      <form method="POST" action="{{ url_for('review.session', question_id=question.id) }}">
-        <h3 style="margin-bottom: 12px;">Did you get it right this time?</h3>
-
-        <div class="form-group">
-          <label class="form-label" for="user_answer">Your Answer in Practice</label>
-          <input type="text" id="user_answer" name="user_answer" class="form-control" placeholder="e.g. D or 12.5">
-        </div>
-
-        <div class="form-group" style="background: #ffffff; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-          <div style="display: flex; gap: 24px; font-weight: 600;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--success);">
-              <input type="radio" name="is_correct" value="true" required>
-              ● Correct (Progress to next review state)
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--danger);">
-              <input type="radio" name="is_correct" value="false">
-              ✖ Wrong (Stay in Review Queue)
-            </label>
           </div>
-        </div>
 
-        <div class="grid-cols-2">
+        {% elif question.question_type == 'Multiple Select' %}
+          <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Select All Correct Options (Multiple Correct):</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              {% for opt in question.options %}
+                <label style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.95rem; background: #ffffff; padding: 12px 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); cursor: pointer;">
+                  <input type="checkbox" name="user_answer_multi" value="{{ opt.label }}" style="margin-top: 3px;">
+                  <div style="flex: 1;">
+                    <strong style="margin-right: 6px;">{{ opt.label }}.</strong>
+                    {% if opt.text %}<span class="render-math">{{ opt.text }}</span>{% endif %}
+                    {% if opt.image_path %}
+                      <div style="margin-top: 6px;">
+                        <img src="{{ url_for('static', filename=opt.image_path) }}" alt="Option image" style="max-height: 120px; max-width: 100%; object-fit: contain;">
+                      </div>
+                    {% endif %}
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% elif question.question_type == 'Numerical' %}
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Your Numerical Answer:</label>
+            <input type="text" name="user_answer" class="form-control" placeholder="e.g. 25.5" required style="font-size: 1.1rem; padding: 12px;">
+          </div>
+
+        {% else %}
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Your Response / Reasoning:</label>
+            <textarea name="user_answer" class="form-control" rows="4" placeholder="Type your answer or reasoning..." required></textarea>
+          </div>
+        {% endif %}
+
+        <div class="grid-cols-2" style="margin-bottom: 20px;">
           <div class="form-group">
-            <label class="form-label" for="mistake_type">Mistake Category (if wrong)</label>
-            <select name="mistake_type" id="mistake_type" class="form-select">
+            <label class="form-label">Mistake Category (if wrong)</label>
+            <select name="mistake_type" class="form-select">
               <option value="">-- Choose Category --</option>
               {% for m in mistake_types %}
                 <option value="{{ m }}">{{ m }}</option>
@@ -116,8 +102,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="confidence">Confidence</label>
-            <select name="confidence" id="confidence" class="form-select">
+            <label class="form-label">Confidence</label>
+            <select name="confidence" class="form-select">
               <option value="Low">Low</option>
               <option value="Medium" selected>Medium</option>
               <option value="High">High</option>
@@ -125,17 +111,87 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="mistake_reason">Mistake Notes (if wrong)</label>
-          <textarea id="mistake_reason" name="mistake_reason" class="form-control" placeholder="Why were you still confused?"></textarea>
-        </div>
-
         <div style="display: flex; justify-content: flex-end; gap: 12px;">
-          <a href="{{ url_for('review.queue') }}" class="btn btn-secondary">Skip / Back to Queue</a>
-          <button type="submit" class="btn btn-primary">Save Attempt & Continue &rarr;</button>
+          <a href="{{ url_for('review.queue') }}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">Submit Answer & Verify Solution &rarr;</button>
         </div>
       </form>
-    </div>
+
+    {% else %}
+      <!-- Feedback & Solution Reveal View -->
+      <div style="background: {% if is_correct %}#f0fdf4{% else %}#fef2f2{% endif %}; border: 1px solid {% if is_correct %}#bbf7d0{% else %}#fecaca{% endif %}; padding: 16px 20px; border-radius: var(--border-radius-sm); margin-bottom: 24px;">
+        <h3 style="color: {% if is_correct %}var(--success){% else %}var(--danger){% endif %}; margin-bottom: 6px;">
+          {% if is_correct %}
+            ✅ Correct Answer!
+          {% else %}
+            ❌ Incorrect Answer
+          {% endif %}
+        </h3>
+        <p style="margin: 0; font-size: 0.95rem;">
+          New review status for this logged attempt: <strong>{{ target_att.review_state }}</strong>
+        </p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <div style="margin-bottom: 12px;">
+          <strong>Your Review Submission:</strong>
+          <span style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">{{ submitted_answer if submitted_answer else '(Blank)' }}</span>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <strong>Correct Answer:</strong>
+          <span style="font-family: monospace; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px;">
+            {% if question.question_type == 'Multiple Select' %}
+              {{ question.options|selectattr('is_correct')|map(attribute='label')|list|join(', ') }}
+            {% else %}
+              {{ question.correct_answer if question.correct_answer else 'Refer to solution' }}
+            {% endif %}
+          </span>
+        </div>
+        {% if target_att.user_answer %}
+          <div style="margin-bottom: 8px;">
+            <strong>Original Logged Exam Response:</strong>
+            <span style="font-family: monospace; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">{{ target_att.user_answer }}</span>
+          </div>
+        {% endif %}
+        {% if target_att.mistake_reason %}
+          <div style="color: #991b1b; font-size: 0.9rem; margin-top: 6px;">
+            <strong>Previous Error Note:</strong> {{ target_att.mistake_reason }}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if question.solution %}
+        <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--success);">
+          <h3>Official Solution & Explanation:</h3>
+          <div class="render-math solution-text" style="margin-top: 10px; line-height: 1.6;">{{ question.solution }}</div>
+        </div>
+      {% endif %}
+
+      <!-- Recall Notes Field for Logged Exam Attempt -->
+      {% if target_att.exam_id %}
+        <div class="card" style="margin-bottom: 20px; background: #fafafa;">
+          <h3 style="margin-bottom: 8px;">🧠 Recall Notes for this Exam Question</h3>
+          <p class="subtitle" style="margin-bottom: 12px;">Record what you remembered, key formulas, or why you left it unanswered in the exam.</p>
+          <form method="POST" action="{{ url_for('exams.save_recall', exam_id=target_att.exam_id) }}">
+            <input type="hidden" name="attempt_id" value="{{ target_att.id }}">
+            <textarea name="recall_notes" class="form-control" rows="3" placeholder="What do you remember about this question? Why did you leave it unanswered or make a mistake?">{{ target_att.recall_notes or '' }}</textarea>
+            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+              <button type="submit" class="btn btn-secondary btn-sm">💾 Save Recall Notes</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+        <a href="{{ url_for('review.queue') }}" class="btn btn-secondary">&larr; Return to Logged Exam Queue</a>
+        <div style="display: flex; gap: 10px;">
+          <a href="{{ url_for('review.session', attempt_id=target_att.id) }}" class="btn btn-secondary">🔄 Try Again</a>
+          {% if next_att %}
+            <a href="{{ url_for('review.session', attempt_id=next_att.id) }}" class="btn btn-primary">Next Question &rarr;</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

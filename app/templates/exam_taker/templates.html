@@ -27,9 +27,34 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="total_questions">Total Questions</label>
-          <input type="number" id="total_questions" name="total_questions" class="form-control" value="20" min="1" max="100" required>
+          <input type="number" id="total_questions" name="total_questions" class="form-control" value="20" min="1" max="100" required onchange="if (typeof validateAndSerializeRanges === 'function') validateAndSerializeRanges();">
         </div>
       </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label">Ordering Mode</label>
+        <div style="display: flex; gap: 16px; font-weight: 600;">
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="ordering_mode" value="Randomized" checked onclick="toggleOrderingMode('Randomized')">
+            🎲 Randomized Mix
+          </label>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="ordering_mode" value="Structured" onclick="toggleOrderingMode('Structured')">
+            📊 Structured
+          </label>
+        </div>
+      </div>
+
+      <div id="structuredRangesPanel" style="display: none; background: #f8fafc; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+        <h3 style="font-size: 0.9rem; margin-bottom: 8px;">Question Structure Ranges</h3>
+        <div id="rangeCardsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addRangeCard()">+ Add Range</button>
+          <span id="rangeValidationMsg" style="font-size: 0.8rem; font-weight: 600;"></span>
+        </div>
+      </div>
+
+      <input type="hidden" name="ranges_json" id="ranges_json_input">
 
       <button type="submit" class="btn btn-primary" style="width: 100%;">Create Custom Template</button>
     </form>
@@ -64,4 +89,178 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const subjectsData = {{ subjects_data|tojson|safe }};
+
+function toggleOrderingMode(mode) {
+  const panel = document.getElementById('structuredRangesPanel');
+  if (panel) {
+    panel.style.display = (mode === 'Structured') ? 'block' : 'none';
+    if (mode === 'Structured' && document.querySelectorAll('.range-card').length === 0) {
+      const totalQ = parseInt(document.getElementById('total_questions').value) || 20;
+      addRangeCard(1, totalQ);
+    }
+  }
+}
+
+function addRangeCard(startVal, endVal, subIdVal, chapIdVal) {
+  const container = document.getElementById('rangeCardsContainer');
+  if (!container) return;
+
+  const cardIndex = container.children.length;
+  const card = document.createElement('div');
+  card.className = 'range-card';
+  card.style.cssText = 'background: #ffffff; padding: 10px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem;';
+
+  const defaultStart = startVal || 1;
+  const defaultEnd = endVal || parseInt(document.getElementById('total_questions').value) || 20;
+
+  let subjectOptionsHtml = '';
+  if (subjectsData && subjectsData.length > 0) {
+    subjectsData.forEach(s => {
+      subjectOptionsHtml += `<option value="${s.id}">${s.name}</option>`;
+    });
+  }
+
+  card.innerHTML = `
+    <div style="font-weight: 700; color: var(--primary);">#${cardIndex + 1}</div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span>Q</span>
+      <input type="number" class="form-control range-start" value="${defaultStart}" min="1" style="width: 55px; padding: 4px;" onchange="validateAndSerializeRanges()">
+      <span>–</span>
+      <input type="number" class="form-control range-end" value="${defaultEnd}" min="1" style="width: 55px; padding: 4px;" onchange="validateAndSerializeRanges()">
+    </div>
+    <div style="flex: 1; min-width: 120px;">
+      <select class="form-select range-subject" style="padding: 4px;" onchange="onSubjectChange(this)">
+        ${subjectOptionsHtml}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 120px;">
+      <select class="form-select range-chapter" style="padding: 4px;" onchange="validateAndSerializeRanges()">
+        <option value="">-- All Chapters --</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" style="color: var(--danger); padding: 2px 6px;" onclick="removeRangeCard(this)">×</button>
+  `;
+
+  container.appendChild(card);
+  const subjSelect = card.querySelector('.range-subject');
+  if (subIdVal && subjSelect) subjSelect.value = subIdVal;
+  if (subjSelect) onSubjectChange(subjSelect, chapIdVal);
+  validateAndSerializeRanges();
+}
+
+function onSubjectChange(subjSelect, chapIdVal) {
+  const card = subjSelect.closest('.range-card');
+  if (!card) return;
+  const chapSelect = card.querySelector('.range-chapter');
+  const subjId = parseInt(subjSelect.value);
+  const subj = subjectsData ? subjectsData.find(s => s.id === subjId) : null;
+
+  chapSelect.innerHTML = '<option value="">-- All Chapters --</option>';
+  if (subj && subj.sorted_chapters) {
+    subj.sorted_chapters.forEach(c => {
+      chapSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+  }
+  if (chapIdVal) chapSelect.value = chapIdVal;
+  validateAndSerializeRanges();
+}
+
+function removeRangeCard(btn) {
+  const card = btn.closest('.range-card');
+  if (card) {
+    card.remove();
+    reindexRanges();
+    validateAndSerializeRanges();
+  }
+}
+
+function reindexRanges() {
+  const cards = document.querySelectorAll('.range-card');
+  cards.forEach((card, idx) => {
+    const label = card.querySelector('div');
+    if (label) label.textContent = `#${idx + 1}`;
+  });
+}
+
+function validateAndSerializeRanges() {
+  const cards = document.querySelectorAll('.range-card');
+  const totalQInput = document.getElementById('total_questions');
+  const totalQ = totalQInput ? (parseInt(totalQInput.value) || 20) : 20;
+  const msgSpan = document.getElementById('rangeValidationMsg');
+  const hiddenInput = document.getElementById('ranges_json_input');
+
+  const rangesList = [];
+  const covered = new Array(totalQ + 1).fill(false);
+  let isValid = true;
+  let errorMsg = '';
+
+  cards.forEach(card => {
+    const start = parseInt(card.querySelector('.range-start').value) || 0;
+    const end = parseInt(card.querySelector('.range-end').value) || 0;
+    const subjSelect = card.querySelector('.range-subject');
+    const chapSelect = card.querySelector('.range-chapter');
+
+    const subjId = parseInt(subjSelect.value) || null;
+    const chapId = parseInt(chapSelect.value) || null;
+    const subjName = subjSelect.options[subjSelect.selectedIndex] ? subjSelect.options[subjSelect.selectedIndex].text : '';
+    const chapName = chapSelect.options[chapSelect.selectedIndex] && chapSelect.value ? chapSelect.options[chapSelect.selectedIndex].text : 'All Chapters';
+
+    if (start < 1 || end < 1 || start > totalQ || end > totalQ || start > end) {
+      isValid = false;
+      errorMsg = `Positions Q${start}–Q${end} invalid.`;
+    }
+
+    for (let p = start; p <= end; p++) {
+      if (p >= 1 && p <= totalQ) {
+        if (covered[p]) {
+          isValid = false;
+          errorMsg = `Overlap at Q${p}.`;
+        }
+        covered[p] = true;
+      }
+    }
+
+    rangesList.push({
+      start: start,
+      end: end,
+      subject_id: subjId,
+      chapter_id: chapId,
+      subject_name: subjName,
+      chapter_name: chapName
+    });
+  });
+
+  const missing = [];
+  for (let p = 1; p <= totalQ; p++) {
+    if (!covered[p]) missing.push(p);
+  }
+
+  if (missing.length > 0 && isValid && cards.length > 0) {
+    isValid = false;
+    errorMsg = `Unassigned positions: Q${missing.join(', Q')}.`;
+  }
+
+  if (msgSpan) {
+    if (cards.length === 0) {
+      msgSpan.textContent = '';
+    } else if (isValid) {
+      msgSpan.style.color = 'var(--success)';
+      msgSpan.textContent = `✓ Valid (1–${totalQ})`;
+    } else {
+      msgSpan.style.color = 'var(--danger)';
+      msgSpan.textContent = `⚠️ ${errorMsg}`;
+    }
+  }
+
+  if (hiddenInput) {
+    hiddenInput.value = JSON.stringify(rangesList);
+  }
+  return isValid;
+}
+</script>
 {% endblock %}

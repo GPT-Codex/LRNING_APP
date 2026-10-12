@@ -62,6 +62,39 @@
 
       <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
+      <!-- Step 2B: Question Structure & Range Editor -->
+      <div style="margin-bottom: 24px;">
+        <h2>Question Ordering Mode</h2>
+        <div class="form-group">
+          <div style="display: flex; gap: 20px; font-weight: 600;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="ordering_mode" value="Randomized" checked onclick="toggleOrderingMode('Randomized')">
+              🎲 Randomized Mix
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="ordering_mode" value="Structured" onclick="toggleOrderingMode('Structured')">
+              📊 Structured by Question Number
+            </label>
+          </div>
+        </div>
+
+        <div id="structuredRangesPanel" style="display: none; background: #f8fafc; padding: 20px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); margin-top: 12px;">
+          <h3 style="font-size: 0.95rem; margin-bottom: 6px;">Question Structure Range Allocation</h3>
+          <p class="subtitle" style="margin-bottom: 16px; font-size: 0.85rem;">Assign specific subjects and chapters to question-number ranges.</p>
+
+          <div id="rangeCardsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+
+          <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addRangeCard()">+ Add Range</button>
+            <span id="rangeValidationMsg" style="font-size: 0.85rem; font-weight: 600;"></span>
+          </div>
+        </div>
+
+        <input type="hidden" name="ranges_json" id="ranges_json_input">
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
       <!-- Step 3: Scope Selection -->
       <div style="margin-bottom: 24px;">
         <h2>Step 3: Exam Scope / Question Pool</h2>
@@ -143,16 +176,189 @@
 
 {% block extra_scripts %}
 <script>
+const subjectsData = {{ subjects_data|tojson|safe }};
+
 function updateScopePanels(mode) {
   const panelSubj = document.getElementById('panelSubjectwise');
   const panelChap = document.getElementById('panelChapterwise');
-  panelSubj.style.display = (mode === 'Subjectwise') ? 'block' : 'none';
-  panelChap.style.display = (mode === 'Chapterwise') ? 'block' : 'none';
+  if (panelSubj) panelSubj.style.display = (mode === 'Subjectwise') ? 'block' : 'none';
+  if (panelChap) panelChap.style.display = (mode === 'Chapterwise') ? 'block' : 'none';
+}
+
+function toggleOrderingMode(mode) {
+  const panel = document.getElementById('structuredRangesPanel');
+  if (panel) {
+    panel.style.display = (mode === 'Structured') ? 'block' : 'none';
+    if (mode === 'Structured' && document.querySelectorAll('.range-card').length === 0) {
+      const totalQ = parseInt(document.getElementById('total_questions').value) || 30;
+      addRangeCard(1, totalQ);
+    }
+  }
+}
+
+function addRangeCard(startVal, endVal, subIdVal, chapIdVal) {
+  const container = document.getElementById('rangeCardsContainer');
+  if (!container) return;
+
+  const cardIndex = container.children.length;
+  const card = document.createElement('div');
+  card.className = 'range-card';
+  card.style.cssText = 'background: #ffffff; padding: 14px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;';
+
+  const defaultStart = startVal || 1;
+  const defaultEnd = endVal || parseInt(document.getElementById('total_questions').value) || 30;
+
+  let subjectOptionsHtml = '';
+  if (subjectsData && subjectsData.length > 0) {
+    subjectsData.forEach(s => {
+      subjectOptionsHtml += `<option value="${s.id}">${s.name}</option>`;
+    });
+  }
+
+  card.innerHTML = `
+    <div style="font-weight: 700; color: var(--primary); min-width: 70px;">Range #${cardIndex + 1}</div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 0.85rem; font-weight: 600;">Q</span>
+      <input type="number" class="form-control range-start" value="${defaultStart}" min="1" style="width: 70px; padding: 6px;" onchange="validateAndSerializeRanges()">
+      <span>to</span>
+      <input type="number" class="form-control range-end" value="${defaultEnd}" min="1" style="width: 70px; padding: 6px;" onchange="validateAndSerializeRanges()">
+    </div>
+    <div style="flex: 1; min-width: 180px;">
+      <select class="form-select range-subject" onchange="onSubjectChange(this)">
+        ${subjectOptionsHtml}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 180px;">
+      <select class="form-select range-chapter" onchange="validateAndSerializeRanges()">
+        <option value="">-- All Chapters in Subject --</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" style="color: var(--danger);" onclick="removeRangeCard(this)">Remove</button>
+  `;
+
+  container.appendChild(card);
+  const subjSelect = card.querySelector('.range-subject');
+  if (subIdVal && subjSelect) subjSelect.value = subIdVal;
+  if (subjSelect) onSubjectChange(subjSelect, chapIdVal);
+  validateAndSerializeRanges();
+}
+
+function onSubjectChange(subjSelect, chapIdVal) {
+  const card = subjSelect.closest('.range-card');
+  if (!card) return;
+  const chapSelect = card.querySelector('.range-chapter');
+  const subjId = parseInt(subjSelect.value);
+  const subj = subjectsData ? subjectsData.find(s => s.id === subjId) : None;
+
+  chapSelect.innerHTML = '<option value="">-- All Chapters in Subject --</option>';
+  if (subj && subj.sorted_chapters) {
+    subj.sorted_chapters.forEach(c => {
+      chapSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+  }
+  if (chapIdVal) chapSelect.value = chapIdVal;
+  validateAndSerializeRanges();
+}
+
+function removeRangeCard(btn) {
+  const card = btn.closest('.range-card');
+  if (card) {
+    card.remove();
+    reindexRanges();
+    validateAndSerializeRanges();
+  }
+}
+
+function reindexRanges() {
+  const cards = document.querySelectorAll('.range-card');
+  cards.forEach((card, idx) => {
+    const label = card.querySelector('div');
+    if (label) label.textContent = `Range #${idx + 1}`;
+  });
+}
+
+function validateAndSerializeRanges() {
+  const cards = document.querySelectorAll('.range-card');
+  const totalQInput = document.getElementById('total_questions');
+  const totalQ = totalQInput ? (parseInt(totalQInput.value) || 30) : 30;
+  const msgSpan = document.getElementById('rangeValidationMsg');
+  const hiddenInput = document.getElementById('ranges_json_input');
+
+  const rangesList = [];
+  const covered = new Array(totalQ + 1).fill(false);
+  let isValid = true;
+  let errorMsg = '';
+
+  cards.forEach(card => {
+    const start = parseInt(card.querySelector('.range-start').value) || 0;
+    const end = parseInt(card.querySelector('.range-end').value) || 0;
+    const subjSelect = card.querySelector('.range-subject');
+    const chapSelect = card.querySelector('.range-chapter');
+
+    const subjId = parseInt(subjSelect.value) || null;
+    const chapId = parseInt(chapSelect.value) || null;
+    const subjName = subjSelect.options[subjSelect.selectedIndex] ? subjSelect.options[subjSelect.selectedIndex].text : '';
+    const chapName = chapSelect.options[chapSelect.selectedIndex] && chapSelect.value ? chapSelect.options[chapSelect.selectedIndex].text : 'All Chapters';
+
+    if (start < 1 || end < 1 || start > totalQ || end > totalQ || start > end) {
+      isValid = false;
+      errorMsg = `Positions Q${start}–Q${end} are invalid (must be between 1 and ${totalQ}).`;
+    }
+
+    for (let p = start; p <= end; p++) {
+      if (p >= 1 && p <= totalQ) {
+        if (covered[p]) {
+          isValid = false;
+          errorMsg = `Overlap detected at Question #${p}.`;
+        }
+        covered[p] = true;
+      }
+    }
+
+    rangesList.push({
+      start: start,
+      end: end,
+      subject_id: subjId,
+      chapter_id: chapId,
+      subject_name: subjName,
+      chapter_name: chapName
+    });
+  });
+
+  const missing = [];
+  for (let p = 1; p <= totalQ; p++) {
+    if (!covered[p]) missing.push(p);
+  }
+
+  if (missing.length > 0 && isValid && cards.length > 0) {
+    isValid = false;
+    errorMsg = `Unassigned question positions: Q${missing.join(', Q')}.`;
+  }
+
+  if (msgSpan) {
+    if (cards.length === 0) {
+      msgSpan.textContent = '';
+    } else if (isValid) {
+      msgSpan.style.color = 'var(--success)';
+      msgSpan.textContent = `✓ Structure valid! All positions 1–${totalQ} assigned.`;
+    } else {
+      msgSpan.style.color = 'var(--danger)';
+      msgSpan.textContent = `⚠️ ${errorMsg}`;
+    }
+  }
+
+  if (hiddenInput) {
+    hiddenInput.value = JSON.stringify(rangesList);
+  }
+  return isValid;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   const checkedRadio = document.querySelector('input[name="scope_type"]:checked');
   if (checkedRadio) updateScopePanels(checkedRadio.value);
+
+  const orderingRadio = document.querySelector('input[name="ordering_mode"]:checked');
+  if (orderingRadio) toggleOrderingMode(orderingRadio.value);
 });
 </script>
 {% endblock %}

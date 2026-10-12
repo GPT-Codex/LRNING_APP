@@ -37,6 +37,39 @@ def parse_optional_int(val):
     except ValueError:
         raise ValueError(f"Invalid integer value: {val}")
 
+def evaluate_answer(question, user_answer):
+    if user_answer is None or str(user_answer).strip() == '':
+        return None
+    q_type = question.question_type or 'MCQ'
+    user_str = str(user_answer).strip()
+
+    if q_type == 'Multiple Select':
+        try:
+            user_opts = json.loads(user_str)
+            if not isinstance(user_opts, list):
+                user_opts = [s.strip().upper() for s in user_str.split(',') if s.strip()]
+        except Exception:
+            user_opts = [s.strip().upper() for s in user_str.split(',') if s.strip()]
+        user_set = set(str(o).strip().upper() for o in user_opts)
+
+        correct_opts = [opt.label.upper() for opt in question.options if opt.is_correct]
+        if not correct_opts and question.correct_answer:
+            correct_opts = [s.strip().upper() for s in question.correct_answer.split(',') if s.strip()]
+        correct_set = set(correct_opts)
+
+        return user_set == correct_set
+
+    elif q_type == 'Numerical':
+        try:
+            val_user = float(user_str)
+            val_corr = float((question.correct_answer or '').strip())
+            return abs(val_user - val_corr) < 1e-5
+        except (ValueError, TypeError):
+            return user_str.lower() == (question.correct_answer or '').strip().lower()
+
+    else:
+        return user_str.lower() == (question.correct_answer or '').strip().lower()
+
 def parse_optional_float(val):
     if val is None:
         return None
