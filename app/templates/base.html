@@ -40,17 +40,49 @@
         </a>
       </li>
 
-      <div class="sidebar-group-title">Exams & Logging</div>
+      <div class="sidebar-group-title">Logged Exams</div>
       <li class="sidebar-item">
         <a href="{{ url_for('exams.list_exams') }}" class="sidebar-link {% if active_page == 'exams' %}active{% endif %}">
           <span>📝</span>
-          <span>Exams</span>
+          <span>Exam History</span>
         </a>
       </li>
       <li class="sidebar-item">
         <a href="{{ url_for('exams.create_exam') }}" class="sidebar-link {% if active_page == 'new_exam' %}active{% endif %}">
           <span>➕</span>
-          <span>New Exam</span>
+          <span>Log New Exam</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('review.queue') }}" class="sidebar-link {% if active_page == 'review' %}active{% endif %}">
+          <span>🔁</span>
+          <span>Logged Exam Review</span>
+          {% if due_review_count is defined and due_review_count > 0 %}
+            <span class="sidebar-badge">{{ due_review_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+
+      <div class="sidebar-group-title">Exam Taker</div>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exam_taker.setup') }}" class="sidebar-link {% if active_page == 'exam_taker_setup' or active_page == 'exam_taker' %}active{% endif %}">
+          <span>⚡</span>
+          <span>Start Exam</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exam_taker.past_sessions') }}" class="sidebar-link {% if active_page == 'exam_taker_sessions' %}active{% endif %}">
+          <span>📜</span>
+          <span>Past Sessions</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{{ url_for('exam_taker.review_queue') }}" class="sidebar-link {% if active_page == 'exam_taker_review' %}active{% endif %}">
+          <span>🔄</span>
+          <span>Taken Exam Review</span>
+          {% if due_taken_review_count is defined and due_taken_review_count > 0 %}
+            <span class="sidebar-badge">{{ due_taken_review_count }}</span>
+          {% endif %}
         </a>
       </li>
 
@@ -58,38 +90,15 @@
       <li class="sidebar-item">
         <a href="{{ url_for('questions.bank') }}" class="sidebar-link {% if active_page == 'question_bank' %}active{% endif %}">
           <span>📚</span>
-          <span>Question Bank</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="{{ url_for('questions.bank', review_state='Wrong') }}" class="sidebar-link {% if active_page == 'wrong_questions' %}active{% endif %}">
-          <span>❌</span>
-          <span>Wrong Questions</span>
+          <span>All Questions</span>
         </a>
       </li>
 
-      <div class="sidebar-group-title">Revision & Analytics</div>
-      <li class="sidebar-item">
-        <a href="{{ url_for('review.queue') }}" class="sidebar-link {% if active_page == 'review' %}active{% endif %}">
-          <span>🔁</span>
-          <span>Review Queue</span>
-          {% if due_review_count > 0 %}
-            <span class="sidebar-badge">{{ due_review_count }}</span>
-          {% endif %}
-        </a>
-      </li>
+      <div class="sidebar-group-title">Analytics</div>
       <li class="sidebar-item">
         <a href="{{ url_for('analytics.index') }}" class="sidebar-link {% if active_page == 'analytics' %}active{% endif %}">
           <span>📈</span>
           <span>Analytics</span>
-        </a>
-      </li>
-
-      <div class="sidebar-group-title">Exam Practice</div>
-      <li class="sidebar-item">
-        <a href="{{ url_for('exam_taker.landing') }}" class="sidebar-link {% if active_page == 'exam_taker' %}active{% endif %}">
-          <span>⚡</span>
-          <span>Exam Taker</span>
         </a>
       </li>
 

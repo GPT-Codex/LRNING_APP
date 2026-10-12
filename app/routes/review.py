@@ -1,33 +1,33 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+import json
 from app.models import db, Question, Attempt
-from app.utils import parse_optional_int
+from app.utils import parse_optional_int, evaluate_answer
 from datetime import datetime
 
 review_bp = Blueprint('review', __name__)
 
 @review_bp.route('/')
 def queue():
-    # Questions needing review: Wrong, Learning, Reviewing
     state_filter = request.args.get('state')
 
-    query = Question.query
+    # Query logged attempts or questions logged in exams needing review
+    query = Attempt.query.filter(Attempt.exam_id.isnot(None))
     if state_filter:
-        query = query.filter_by(review_state=state_filter)
+        query = query.filter(Attempt.review_state == state_filter)
     else:
-        query = query.filter(Question.review_state.in_(['Wrong', 'Learning', 'Reviewing']))
+        query = query.filter(Attempt.review_state.in_(['Wrong', 'Learning', 'Reviewing']))
 
-    due_questions = query.order_by(Question.created_at.desc()).all()
+    due_attempts = query.order_by(Attempt.created_at.desc()).all()
 
-    # Stats breakdown
-    wrong_count = Question.query.filter_by(review_state='Wrong').count()
-    learning_count = Question.query.filter_by(review_state='Learning').count()
-    reviewing_count = Question.query.filter_by(review_state='Reviewing').count()
-    mastered_count = Question.query.filter_by(review_state='Mastered').count()
+    wrong_count = Attempt.query.filter(Attempt.exam_id.isnot(None), Attempt.review_state == 'Wrong').count()
+    learning_count = Attempt.query.filter(Attempt.exam_id.isnot(None), Attempt.review_state == 'Learning').count()
+    reviewing_count = Attempt.query.filter(Attempt.exam_id.isnot(None), Attempt.review_state == 'Reviewing').count()
+    mastered_count = Attempt.query.filter(Attempt.exam_id.isnot(None), Attempt.review_state == 'Mastered').count()
 
     return render_template(
         'review/queue.html',
         active_page='review',
-        due_questions=due_questions,
+        due_attempts=due_attempts,
         wrong_count=wrong_count,
         learning_count=learning_count,
         reviewing_count=reviewing_count,
@@ -35,28 +35,28 @@ def queue():
         current_filter=state_filter
     )
 
-@review_bp.route('/session/<int:question_id>', methods=['GET', 'POST'])
-def session(question_id):
-    question = Question.query.get_or_404(question_id)
-    latest_att = question.latest_attempt
+@review_bp.route('/session/<int:attempt_id>', methods=['GET', 'POST'])
+def session(attempt_id):
+    target_att = Attempt.query.get_or_404(attempt_id)
+    question = target_att.question
 
     if request.method == 'POST':
         user_answer = request.form.get('user_answer', '').strip()
-        is_correct_val = request.form.get('is_correct') # 'true' or 'false'
-        try:
-            time_taken_seconds = parse_optional_int(request.form.get('time_taken_seconds'))
-        except ValueError as e:
-            flash(str(e), 'error')
-            return redirect(url_for('review.session', question_id=question.id))
+        user_answers_list = request.form.getlist('user_answer_multi')
+        if user_answers_list:
+            user_answer = json.dumps(sorted(user_answers_list))
+
+        time_taken_seconds = parse_optional_int(request.form.get('time_taken_seconds'))
         confidence = request.form.get('confidence', 'Medium')
         mistake_type = request.form.get('mistake_type')
         mistake_reason = request.form.get('mistake_reason', '').strip()
 
-        is_correct = True if is_correct_val == 'true' else False
+        is_correct = evaluate_answer(question, user_answer)
 
-        # Create new Attempt record of type 'REVIEW'
+        # Create new Attempt record of type 'REVIEW' for Logged Exam
         new_att = Attempt(
             question_id=question.id,
+            exam_id=target_att.exam_id,
             attempt_type='REVIEW',
             user_answer=user_answer,
             is_correct=is_correct,
@@ -69,35 +69,42 @@ def session(question_id):
         )
         db.session.add(new_att)
 
-        # Update Review State based on progression
+        # Update target_att review_state
         if is_correct:
-            if question.review_state in ['Wrong', 'New']:
-                question.review_state = 'Learning'
-            elif question.review_state == 'Learning':
-                question.review_state = 'Reviewing'
-            elif question.review_state == 'Reviewing':
-                question.review_state = 'Mastered'
+            if target_att.review_state in ['Wrong', 'New']:
+                target_att.review_state = 'Learning'
+            elif target_att.review_state == 'Learning':
+                target_att.review_state = 'Reviewing'
+            elif target_att.review_state == 'Reviewing':
+                target_att.review_state = 'Mastered'
         else:
-            # Drop back to Wrong / Learning if incorrect
-            question.review_state = 'Wrong'
+            target_att.review_state = 'Wrong'
 
         db.session.commit()
 
-        if is_correct:
-            flash(f'Great job! Question review recorded as Correct. New status: {question.review_state}', 'success')
-        else:
-            flash('Review recorded as Wrong. Question remains in review queue.', 'error')
+        next_att = Attempt.query.filter(
+            Attempt.exam_id.isnot(None),
+            Attempt.review_state.in_(['Wrong', 'Learning', 'Reviewing']),
+            Attempt.id != target_att.id
+        ).first()
 
-        # Find next question in review queue or return to queue
-        next_q = Question.query.filter(Question.review_state.in_(['Wrong', 'Learning', 'Reviewing']), Question.id != question.id).first()
-        if next_q:
-            return redirect(url_for('review.session', question_id=next_q.id))
-        return redirect(url_for('review.queue'))
+        return render_template(
+            'review/session.html',
+            active_page='review',
+            target_att=target_att,
+            question=question,
+            is_correct=is_correct,
+            submitted_answer=user_answer,
+            submitted=True,
+            next_att=next_att,
+            mistake_types=Attempt.MISTAKE_TYPES
+        )
 
     return render_template(
         'review/session.html',
         active_page='review',
+        target_att=target_att,
         question=question,
-        latest_att=latest_att,
+        submitted=False,
         mistake_types=Attempt.MISTAKE_TYPES
     )

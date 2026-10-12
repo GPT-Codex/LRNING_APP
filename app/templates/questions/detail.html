@@ -94,7 +94,11 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2>Attempt & Revision History</h2>
-      <a href="{{ url_for('review.session', question_id=question.id) }}" class="btn btn-primary btn-sm">🔁 Practice Active Recall Now</a>
+      {% if attempts %}
+        <a href="{{ url_for('review.session', attempt_id=attempts[0].id) }}" class="btn btn-primary btn-sm">🔁 Practice Active Recall Now</a>
+      {% else %}
+        <a href="{{ url_for('review.queue') }}" class="btn btn-secondary btn-sm">Review Queue</a>
+      {% endif %}
     </div>
 
     {% if attempts %}

@@ -1,9 +1,21 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.models import db, Exam, Question, Attempt, Subject, Chapter, Tag, Option
 from app.utils import save_uploaded_image, parse_optional_int, parse_optional_float, sort_subjects, sort_chapters
 from datetime import datetime
 
 exams_bp = Blueprint('exams', __name__)
+
+@exams_bp.route('/<int:exam_id>/recall/save', methods=['POST'])
+def save_recall(exam_id):
+    attempt_id = request.form.get('attempt_id', type=int)
+    recall_text = request.form.get('recall_notes', '').strip()
+    att = Attempt.query.filter_by(id=attempt_id, exam_id=exam_id).first_or_404()
+    att.recall_notes = recall_text
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify({'status': 'success', 'recall_notes': recall_text})
+    flash('Recall notes saved successfully.', 'success')
+    return redirect(url_for('exams.exam_result', exam_id=exam_id))
 
 @exams_bp.route('/')
 def list_exams():

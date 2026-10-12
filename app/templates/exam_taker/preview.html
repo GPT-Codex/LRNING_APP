@@ -30,12 +30,32 @@
     <div style="margin-bottom: 20px;">
       <h3>Scope & Configuration</h3>
       <div style="display: flex; gap: 12px; font-size: 0.9rem; margin-top: 6px;">
-        <span class="badge" style="background: #e2e8f0; color: var(--text-primary);">Scope: {{ session.scope_type }}</span>
+        <span class="badge" style="background: #e2e8f0; color: var(--text-primary);">Mode: {{ session.ordering_mode }} ({{ session.scope_type }})</span>
         <span class="badge badge-{{ session.difficulty_mode|lower }}">Difficulty Target: {{ session.difficulty_mode }}</span>
       </div>
     </div>
 
-    {% if subject_counts %}
+    {% if ranges %}
+      <div style="margin-bottom: 24px; background: #ffffff; border: 1px solid var(--border-color); padding: 16px; border-radius: var(--border-radius-sm);">
+        <h3 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--primary);">Question Structure Ranges</h3>
+        <table class="table table-sm" style="width: 100%; font-size: 0.9rem;">
+          <thead>
+            <tr style="background: #f8fafc; text-align: left;">
+              <th style="padding: 8px;">Questions</th>
+              <th style="padding: 8px;">Allowed Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in ranges %}
+              <tr style="border-top: 1px solid var(--border-color);">
+                <td style="padding: 8px;"><strong>Questions {{ r.start }}–{{ r.end }}</strong></td>
+                <td style="padding: 8px;">{{ r.subject_name }}{% if r.chapter_name and r.chapter_name != 'All Chapters' %} &middot; {{ r.chapter_name }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% elif subject_counts %}
       <div style="margin-bottom: 24px; background: #ffffff; border: 1px solid var(--border-color); padding: 16px; border-radius: var(--border-radius-sm);">
         <h3 style="font-size: 0.925rem; margin-bottom: 10px;">Question Pool Subject Distribution:</h3>
         <div style="display: flex; flex-wrap: wrap; gap: 10px;">

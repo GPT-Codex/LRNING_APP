@@ -127,5 +127,91 @@ class ExamTakerTestCase(unittest.TestCase):
         session_sub = ExamSession.query.get(session.id)
         self.assertEqual(session_sub.status, 'Submitted')
 
+    def test_multiple_correct_mcq_exact_match(self):
+        c1 = Chapter.query.first()
+        q_multi = Question(
+            chapter_id=c1.id,
+            question_text="Select B and C",
+            question_type="Multiple Select",
+            difficulty="Medium",
+            correct_answer="B,C"
+        )
+        opt_a = Option(question=q_multi, label="A", text="Opt A", is_correct=False)
+        opt_b = Option(question=q_multi, label="B", text="Opt B", is_correct=True)
+        opt_c = Option(question=q_multi, label="C", text="Opt C", is_correct=True)
+        opt_d = Option(question=q_multi, label="D", text="Opt D", is_correct=False)
+        db.session.add_all([q_multi, opt_a, opt_b, opt_c, opt_d])
+        db.session.commit()
+
+        from app.utils import evaluate_answer
+        self.assertTrue(evaluate_answer(q_multi, '["B", "C"]'))
+        self.assertFalse(evaluate_answer(q_multi, '["B"]'))
+        self.assertFalse(evaluate_answer(q_multi, '["B", "C", "D"]'))
+
+    def test_structured_ranges_generation_and_validation(self):
+        s1 = Subject.query.filter_by(name="Physics").first()
+        c_p1 = Chapter.query.filter_by(name="Chapter 1").first()
+        c_p2 = Chapter.query.filter_by(name="Chapter 2").first()
+
+        ranges = [
+            {"start": 1, "end": 2, "subject_id": s1.id, "chapter_id": c_p1.id, "subject_name": "Physics", "chapter_name": "Chapter 1"},
+            {"start": 3, "end": 4, "subject_id": s1.id, "chapter_id": c_p2.id, "subject_name": "Physics", "chapter_name": "Chapter 2"}
+        ]
+        pattern = [{"name": "MCQ", "type": "MCQ", "start": 1, "end": 4, "count": 4}]
+
+        success, gen_data, err = validate_and_generate_exam(
+            scope_type="Subjectwise",
+            selected_subject_ids=[s1.id],
+            selected_chapter_ids=[],
+            difficulty_mode="Medium",
+            pattern_sections=pattern,
+            total_questions=4,
+            ordering_mode="Structured",
+            ranges=ranges
+        )
+        self.assertTrue(success)
+        self.assertEqual(len(gen_data["question_ids"]), 4)
+
+    def test_recall_notes_and_queues_data_isolation(self):
+        # 1. Test Logged Exam recall note & review
+        from app.models import Exam, Attempt, ExamSession, ExamSessionResponse
+
+        exam = Exam(name="External Logged Exam", total_marks=10, score=0)
+        db.session.add(exam)
+        db.session.commit()
+
+        q = Question.query.first()
+        att = Attempt(question_id=q.id, exam_id=exam.id, attempt_type='EXAM', is_correct=False, review_state='Wrong')
+        db.session.add(att)
+        db.session.commit()
+
+        # Save recall notes for logged exam
+        res_recall_log = self.client.post(f'/exams/{exam.id}/recall/save', data={
+            'attempt_id': att.id,
+            'recall_notes': 'Remembered formula for Q1'
+        }, follow_redirects=True)
+        self.assertEqual(res_recall_log.status_code, 200)
+        self.assertEqual(Attempt.query.get(att.id).recall_notes, 'Remembered formula for Q1')
+
+        # 2. Test Taken Exam session response & review
+        session = ExamSession(name="In-App Practice Exam", status='Submitted', total_questions=1, score=0, total_marks=4)
+        db.session.add(session)
+        db.session.commit()
+
+        resp = ExamSessionResponse(session_id=session.id, question_id=q.id, is_correct=False, review_state='Wrong')
+        db.session.add(resp)
+        db.session.commit()
+
+        # Save recall notes for taken exam
+        res_recall_taken = self.client.post(f'/exam-taker/session/{session.id}/recall/save', data={
+            'response_id': resp.id,
+            'recall_notes': 'In-app recall notes Q1'
+        }, follow_redirects=True)
+        self.assertEqual(res_recall_taken.status_code, 200)
+
+        # Confirm strict isolation
+        self.assertEqual(ExamSessionResponse.query.get(resp.id).recall_notes, 'In-app recall notes Q1')
+        self.assertEqual(Attempt.query.get(att.id).recall_notes, 'Remembered formula for Q1')
+
 if __name__ == '__main__':
     unittest.main()

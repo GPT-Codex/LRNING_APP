@@ -119,6 +119,8 @@ class Attempt(db.Model):
     mistake_type = db.Column(db.String(50), nullable=True)
     mistake_reason = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    recall_notes = db.Column(db.Text, nullable=True)
+    review_state = db.Column(db.String(30), nullable=False, default='New') # New, Wrong, Learning, Reviewing, Mastered
     status = db.Column(db.String(30), nullable=False, default='Completed')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -141,6 +143,8 @@ class ExamTemplate(db.Model):
     name = db.Column(db.String(150), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False, default=60)
     total_questions = db.Column(db.Integer, nullable=False, default=30)
+    ordering_mode = db.Column(db.String(30), nullable=False, default='Randomized') # Randomized or Structured
+    ranges_json = db.Column(db.Text, nullable=True) # JSON list of range rules
     pattern_json = db.Column(db.Text, nullable=False) # JSON list of pattern sections
     difficulty_json = db.Column(db.Text, nullable=False) # JSON dict of difficulty distributions
     is_default = db.Column(db.Boolean, default=False)
@@ -154,6 +158,8 @@ class ExamSession(db.Model):
     duration_minutes = db.Column(db.Integer, nullable=False, default=60)
     total_questions = db.Column(db.Integer, nullable=False, default=30)
     scope_type = db.Column(db.String(30), nullable=False, default='All Mixed') # Subjectwise, Chapterwise, All Mixed
+    ordering_mode = db.Column(db.String(30), nullable=False, default='Randomized') # Randomized or Structured
+    ranges_json = db.Column(db.Text, nullable=True)
     selected_subjects_json = db.Column(db.Text, nullable=True) # JSON list of subject IDs
     selected_chapters_json = db.Column(db.Text, nullable=True) # JSON list of chapter IDs
     difficulty_mode = db.Column(db.String(20), nullable=False, default='Medium') # Easy, Medium, Hard
@@ -179,6 +185,18 @@ class ExamSessionResponse(db.Model):
     is_correct = db.Column(db.Boolean, nullable=True)
     marks_awarded = db.Column(db.Float, nullable=False, default=0.0)
     time_taken_seconds = db.Column(db.Integer, nullable=True)
+    recall_notes = db.Column(db.Text, nullable=True)
+    review_state = db.Column(db.String(30), nullable=False, default='New') # New, Wrong, Learning, Reviewing, Mastered
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     question = db.relationship('Question')
+    review_attempts = db.relationship('ExamSessionReviewAttempt', backref='session_response', cascade='all, delete-orphan', lazy=True, order_by='ExamSessionReviewAttempt.created_at.desc()')
+
+class ExamSessionReviewAttempt(db.Model):
+    __tablename__ = 'exam_session_review_attempt'
+    id = db.Column(db.Integer, primary_key=True)
+    response_id = db.Column(db.Integer, db.ForeignKey('exam_session_response.id', ondelete='CASCADE'), nullable=False)
+    user_answer = db.Column(db.Text, nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+    time_taken_seconds = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

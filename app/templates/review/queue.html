@@ -8,8 +8,8 @@
     <h1>Active Recall Review Queue</h1>
     <p class="subtitle">Systematic spaced review queue. Convert mistakes into mastered knowledge through active re-testing.</p>
   </div>
-  {% if due_questions %}
-    <a href="{{ url_for('review.session', question_id=due_questions[0].id) }}" class="btn btn-success">▶ Start Review Session</a>
+  {% if due_attempts %}
+    <a href="{{ url_for('review.session', attempt_id=due_attempts[0].id) }}" class="btn btn-success">▶ Start Review Session</a>
   {% endif %}
 </div>
 
@@ -53,19 +53,20 @@
     {% endif %}
   </div>
 
-  {% if due_questions %}
+  {% if due_attempts %}
     <div style="display: flex; flex-direction: column; gap: 16px;">
-      {% for q in due_questions %}
-        {% set last_att = q.latest_attempt %}
+      {% for att in due_attempts %}
+        {% set q = att.question %}
         <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 18px; background: #ffffff; display: flex; justify-content: space-between; align-items: center; gap: 20px;">
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
               <span class="badge" style="background: #f1f5f9; color: var(--text-primary);">
                 {{ q.chapter.subject.name if q.chapter and q.chapter.subject else '' }} &rarr; {{ q.chapter.name if q.chapter else '' }}
               </span>
-              <span class="badge badge-state-{{ q.review_state|lower }}">{{ q.review_state }}</span>
-              {% if last_att and last_att.mistake_type %}
-                <span class="badge badge-mistake">{{ last_att.mistake_type }}</span>
+              <span class="badge badge-state-{{ att.review_state|lower }}">{{ att.review_state }}</span>
+              <span class="badge" style="background: #e2e8f0; color: #334155;">Exam: {{ att.exam.name if att.exam else 'Logged Exam' }}</span>
+              {% if att.mistake_type %}
+                <span class="badge badge-mistake">{{ att.mistake_type }}</span>
               {% endif %}
             </div>
 
@@ -73,15 +74,15 @@
               {{ q.question_text if q.question_text else '[Image Based Question]' }}
             </div>
 
-            {% if last_att and last_att.mistake_reason %}
+            {% if att.mistake_reason %}
               <div style="font-size: 0.8rem; color: #991b1b; margin-top: 6px;">
-                <strong>Previous Error Note:</strong> {{ last_att.mistake_reason }}
+                <strong>Previous Error Note:</strong> {{ att.mistake_reason }}
               </div>
             {% endif %}
           </div>
 
           <div>
-            <a href="{{ url_for('review.session', question_id=q.id) }}" class="btn btn-primary btn-sm">Practice Active Recall &rarr;</a>
+            <a href="{{ url_for('review.session', attempt_id=att.id) }}" class="btn btn-primary btn-sm">Practice Active Recall &rarr;</a>
           </div>
         </div>
       {% endfor %}
